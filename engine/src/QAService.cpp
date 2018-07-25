@@ -50,15 +50,20 @@ void QAService::initialize()
         qWarning () << Q_FUNC_INFO << "Failed to register service!";
     }
 
-    QDBusInterface iface("ru.qaengine.qatestrunner", "/ru/qaengine/qatestrunner", "ru.qaengine.qatestrunner", QDBusConnection::sessionBus());
-    if (iface.isValid()) {
-        iface.call("ApplicationReady", processName);
+    if (!success) {
+        return;
     }
 
-    if (success) {
-        m_adaptor = new QAAdaptor(this);
-        emit m_adaptor->engineLoaded(QAEngine::isLoaded());
-    }
+    m_adaptor = new QAAdaptor(this);
+    emit m_adaptor->engineLoaded(QAEngine::isLoaded());
+
+    QDBusMessage applicationReady = QDBusMessage::createMethodCall(
+                QStringLiteral("ru.qaengine.qatestrunner"),
+                QStringLiteral("/ru/qaengine/qatestrunner"),
+                QStringLiteral("ru.qaengine.qatestrunner"),
+                QStringLiteral("ApplicationReady"));
+    applicationReady.setArguments({processName});
+    QDBusConnection::sessionBus().call(applicationReady, QDBus::NoBlock);
 }
 
 QAService *QAService::instance()

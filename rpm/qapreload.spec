@@ -90,6 +90,7 @@ sed -i 's#%{buildroot}##g' %{buildroot}%{_libdir}/qt5/qml/ru/qaengine/sailfishte
 %{_sysconfdir}/dbus-1/system.d/ru.qaengine.qabridge.conf
 %{_libdir}/systemd/user/qaservice.service
 %{_datadir}/dbus-1/services/ru.qaengine.qaservice.service
+%{_datadir}/qapreload/qml/TouchIndicator.qml
 
 %files devel
 %{_libdir}/qt5/qml/ru/qaengine/sailfishtest/qmldir

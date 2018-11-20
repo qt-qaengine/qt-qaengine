@@ -52,7 +52,7 @@ void QASocketService::initialize()
     } else {
         m_server = new QTcpServer(this);
         connect(m_server, &QTcpServer::newConnection, this, &QASocketService::newConnection);
-        qWarning() << Q_FUNC_INFO << m_server->listen(QHostAddress::AnyIPv4);
+        qWarning() << Q_FUNC_INFO << m_server->listen(QHostAddress(QHostAddress::LocalHost));
 
         m_sailfishTest = new SailfishTest(m_server);
     }
@@ -296,7 +296,7 @@ void QASocketService::backgroundBootstrap(QTcpSocket *socket, double seconds)
 void QASocketService::findElementBootstrap(QTcpSocket *socket, const QString &strategy, const QString &selector)
 {
     QString fixStrategy = strategy;
-    fixStrategy = fixStrategy.replace(QChar(' '), QString());
+    fixStrategy = fixStrategy.replace(QChar(' '), QChar());
 
     qDebug() << Q_FUNC_INFO << socket << fixStrategy << selector;
 
@@ -309,7 +309,7 @@ void QASocketService::findElementBootstrap(QTcpSocket *socket, const QString &st
 void QASocketService::findElementsBootstrap(QTcpSocket *socket, const QString &strategy, const QString &selector)
 {
     QString fixStrategy = strategy;
-    fixStrategy = fixStrategy.replace(QChar(' '), QString());
+    fixStrategy = fixStrategy.replace(QChar(' '), QChar());
 
     qDebug() << Q_FUNC_INFO << socket << fixStrategy << selector;
 
@@ -322,7 +322,7 @@ void QASocketService::findElementsBootstrap(QTcpSocket *socket, const QString &s
 void QASocketService::findElementFromElementBootstrap(QTcpSocket *socket, const QString &strategy, const QString &selector, const QString &elementId)
 {
     QString fixStrategy = strategy;
-    fixStrategy = fixStrategy.replace(QChar(' '), QString());
+    fixStrategy = fixStrategy.replace(QChar(' '), QChar());
 
     QQuickItem *item = nullptr;
     if (s_items.contains(elementId)) {
@@ -340,7 +340,7 @@ void QASocketService::findElementFromElementBootstrap(QTcpSocket *socket, const 
 void QASocketService::findElementsFromElementBootstrap(QTcpSocket *socket, const QString &strategy, const QString &selector, const QString &elementId)
 {
     QString fixStrategy = strategy;
-    fixStrategy = fixStrategy.replace(QChar(' '), QString());
+    fixStrategy = fixStrategy.replace(QChar(' '), QChar());
 
     QQuickItem *item = nullptr;
     if (s_items.contains(elementId)) {

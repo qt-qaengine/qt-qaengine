@@ -1009,8 +1009,16 @@ bool TouchFilter::eventFilter(QObject *watched, QEvent *event)
     case QEvent::TouchBegin:
     {
         if (QAEngine::processName() != QLatin1String("lipstick")) {
-            QASocketService::instance()->sendToApp(QStringLiteral("lipstick"),
-                                                   QStringLiteral("hideTouchIndicator"));
+            QDBusMessage msg = QDBusMessage::createMethodCall(
+                QStringLiteral("ru.qaengine.qaservice.lipstick"),
+                QStringLiteral("/ru/qaengine/qaservice"),
+                QStringLiteral("ru.qaengine.qaservice"),
+                QStringLiteral("hideTouchIndicator"));
+            QDBusReply<void> reply = QDBusConnection::sessionBus().call(msg, QDBus::NoBlock);
+            if (reply.error().type() != QDBusError::NoError)
+            {
+                qDebug() << Q_FUNC_INFO << reply.error().message();
+            }
         }
     }
     case QEvent::TouchUpdate:

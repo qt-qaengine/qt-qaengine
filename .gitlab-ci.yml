@@ -5,6 +5,7 @@ stages:
   stage: build
   image: coderus/sailfishos-platform-sdk:$SFOS_VERSION
   artifacts:
+    expire_in: 1000 yrs
     paths:
       - $CI_PROJECT_DIR/RPMS/
   script: python -u /usr/bin/sdk-build-ci

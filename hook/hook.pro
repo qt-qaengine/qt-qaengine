@@ -13,6 +13,7 @@ SOURCES += \
     src/hook.cpp
 
 unix {
-    target.path = /usr/lib
+    TARGETPATH = $$[QT_INSTALL_LIBS]
+    target.path = $$TARGETPATH
     INSTALLS = target
 }

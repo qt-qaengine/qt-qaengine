@@ -38,6 +38,15 @@ bool QAEngine::isLoaded()
     return s_instance;
 }
 
+void QAEngine::objectRemoved(QObject *o)
+{
+    if (!s_instance) {
+        return;
+    }
+
+    s_instance->removeItem(o);
+}
+
 void QAEngine::initialize()
 {
     qDebug()
@@ -140,6 +149,15 @@ bool QAEngine::metaInvoke(QTcpSocket *socket, QObject *object, const QString &me
         *implemented = false;
     }
     return false;
+}
+
+void QAEngine::removeItem(QObject *o)
+{
+    if (!m_platform) {
+        return;
+    }
+
+    m_platform->removeItem(o);
 }
 
 void QAEngine::processCommand(QTcpSocket *socket, const QByteArray &cmd)

@@ -12,7 +12,13 @@
 
 QAUserService::QAUserService(QObject *parent) : QObject(parent)
 {
-
+    qDebug()
+        << "Version:"
+#ifdef QAPRELOAD_VERSION
+        << QStringLiteral(QAPRELOAD_VERSION);
+#else
+        << QStringLiteral("2.0.0-dev");
+#endif
 }
 
 void QAUserService::start()

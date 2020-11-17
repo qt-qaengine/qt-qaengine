@@ -7,6 +7,7 @@
 #ifndef Q_OS_SAILFISH
 #include <private/qhooks_p.h>
 #else
+#include <getdef.h>
 #include <pwd.h>
 #include <unistd.h>
 
@@ -14,18 +15,9 @@ typedef void(*StartupCallback)();
 static const int StartupHookIndex = 5;
 StartupCallback qtHookData[100];
 
-inline uid_t nemo_uid()
+inline uid_t user_uid()
 {
-    static struct passwd *nemo_pwd;
-
-    if (!nemo_pwd) {
-        nemo_pwd = getpwnam("nemo");
-        if (!nemo_pwd) {
-            return 100000;
-        }
-    }
-
-    return nemo_pwd->pw_uid;
+    return getdef_num("UID_MIN", 100000);
 }
 #endif
 
@@ -43,7 +35,7 @@ static void my_startup_hook()
 __attribute__((constructor))
 static void libConstructor() {
 #ifdef Q_OS_SAILFISH
-    if (getuid() != nemo_uid()) {
+    if (getuid() != user_uid()) {
         return;
     }
     qtHookData[StartupHookIndex] = reinterpret_cast<StartupCallback>(&my_startup_hook);

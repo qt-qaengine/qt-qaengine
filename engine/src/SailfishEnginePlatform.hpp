@@ -61,6 +61,9 @@ private slots:
     void executeCommand_app_dumpCurrentPage(QTcpSocket *socket);
     void executeCommand_app_dumpCover(QTcpSocket *socket);
 
+    // findElement_%1 methods
+    void findStrategy_classname(QTcpSocket *socket, const QString &selector, bool multiple = false, QObject *parentItem = nullptr);
+
     // own methods
     void onChildrenChanged();
 

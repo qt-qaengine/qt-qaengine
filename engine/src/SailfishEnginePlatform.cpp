@@ -102,6 +102,15 @@ void SailfishEnginePlatform::onChildrenChanged()
     emit ready();
 }
 
+void SailfishEnginePlatform::getScreenshotCoverCommand(QTcpSocket *socket)
+{
+    qWarning()
+        << Q_FUNC_INFO
+        << socket;
+
+    grabScreenshot(socket, getCoverItem(), true);
+}
+
 void SailfishEnginePlatform::pullDownTo(const QString &text)
 {
     qDebug()

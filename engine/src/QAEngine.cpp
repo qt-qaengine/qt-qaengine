@@ -47,6 +47,11 @@ void QAEngine::objectRemoved(QObject *o)
     s_instance->removeItem(o);
 }
 
+IEnginePlatform *QAEngine::getPlatform()
+{
+    return m_platform;
+}
+
 void QAEngine::initialize()
 {
     qDebug()

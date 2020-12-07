@@ -13,6 +13,7 @@ public:
     static QAEngine *instance();
     static bool isLoaded();
     static void objectRemoved(QObject *o);
+    IEnginePlatform* getPlatform();
 
     virtual ~QAEngine();
 

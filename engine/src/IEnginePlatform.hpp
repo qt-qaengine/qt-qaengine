@@ -1,6 +1,9 @@
 #pragma once
 #include <QObject>
 #include <QVariant>
+#include <QPoint>
+#include <QSize>
+#include <QRect>
 
 class QTcpSocket;
 class IEnginePlatform : public QObject

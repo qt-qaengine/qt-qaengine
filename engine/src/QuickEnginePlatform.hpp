@@ -12,7 +12,7 @@ class QuickEnginePlatform : public GenericEnginePlatform
 {
     Q_OBJECT
 public:
-    explicit QuickEnginePlatform(QObject *parent);
+    explicit QuickEnginePlatform(QWindow *window);
     QQuickItem *getItem(const QString &elementId);
 
     QObject *getParent(QObject *item) override;
@@ -46,8 +46,6 @@ protected:
     QQuickWindow *m_rootQuickWindow = nullptr;
 
 private slots:
-    void onFocusWindowChanged(QWindow *window);
-
     // IEnginePlatform interface
     virtual void getPageSourceCommand(QTcpSocket *socket) override;
 

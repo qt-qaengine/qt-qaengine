@@ -6,6 +6,7 @@
 class QAEngineSocketClient;
 class QTcpSocket;
 class IEnginePlatform;
+class QWindow;
 class QAEngine : public QObject
 {
     Q_OBJECT
@@ -13,7 +14,7 @@ public:
     static QAEngine *instance();
     static bool isLoaded();
     static void objectRemoved(QObject *o);
-    IEnginePlatform* getPlatform();
+    IEnginePlatform* getPlatform(bool silent = false);
 
     virtual ~QAEngine();
 
@@ -26,6 +27,7 @@ public slots:
     void initialize();
 
 private slots:
+    void onFocusWindowChanged(QWindow *window);
     void processCommand(QTcpSocket *socket, const QByteArray &cmd);
     bool processAppiumCommand(QTcpSocket *socket, const QString &action, const QVariantList &params);
     void onPlatformReady();
@@ -33,7 +35,6 @@ private slots:
 private:
     explicit QAEngine(QObject *parent = nullptr);
     QAEngineSocketClient *m_client = nullptr;
-    IEnginePlatform *m_platform = nullptr;
 };
 
 #endif // QAENGINE_HPP

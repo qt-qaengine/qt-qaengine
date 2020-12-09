@@ -25,15 +25,19 @@
 
 #include <QtDBus/QDBusConnection>
 
-SailfishEnginePlatform::SailfishEnginePlatform(QObject *parent)
-    : QuickEnginePlatform(parent)
+#include <QLoggingCategory>
+
+Q_LOGGING_CATEGORY(categorySailfishEnginePlatform, "omp.qaengine.platform.sailfish", QtInfoMsg)
+
+SailfishEnginePlatform::SailfishEnginePlatform(QWindow *window)
+    : QuickEnginePlatform(window)
 {
     m_mouseEngine->setMode(QAMouseEngine::TouchEventMode);
 }
 
 QQuickItem *SailfishEnginePlatform::getCoverItem()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO;
 
     QWindow *window = nullptr;
@@ -52,14 +56,14 @@ QQuickItem *SailfishEnginePlatform::getCoverItem()
 
 QQuickItem *SailfishEnginePlatform::getPageStack()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO;
 
     QQuickItem *pageStack = m_rootQuickItem->property("pageStack").value<QQuickItem*>();
     if (!pageStack) {
         pageStack = m_rootQuickItem->childItems().first()->property("pageStack").value<QQuickItem*>();
         if (!pageStack) {
-            qWarning()
+            qCWarning(categorySailfishEnginePlatform)
                 << Q_FUNC_INFO
                 << "Cannot find PageStack!";
             return nullptr;
@@ -70,7 +74,7 @@ QQuickItem *SailfishEnginePlatform::getPageStack()
 
 QQuickItem *SailfishEnginePlatform::getCurrentPage()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO;
 
     QQuickItem *pageStack = getPageStack();
@@ -80,7 +84,7 @@ QQuickItem *SailfishEnginePlatform::getCurrentPage()
 
     QQuickItem *currentPage = pageStack->property("currentPage").value<QQuickItem*>();
     if (!currentPage) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "Cannot get currentPage from PageStack!";
         return nullptr;
@@ -95,7 +99,7 @@ void SailfishEnginePlatform::onChildrenChanged()
         return;
     }
 
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << "Congratilations! New childrens appeared!";
 
@@ -107,7 +111,7 @@ void SailfishEnginePlatform::onChildrenChanged()
 
 void SailfishEnginePlatform::getScreenshotCoverCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -123,7 +127,7 @@ void SailfishEnginePlatform::bridgeStatusChanged(const QString &interface, const
 
     if (properties.contains(QStringLiteral("ActiveState"))) {
         const QString activeState = properties.value(QStringLiteral("ActiveState")).toString();
-        qWarning()
+        qCDebug(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << activeState;
 
@@ -135,7 +139,7 @@ void SailfishEnginePlatform::bridgeStatusChanged(const QString &interface, const
 
 void SailfishEnginePlatform::pullDownTo(const QString &text)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << text;
 
@@ -188,7 +192,7 @@ void SailfishEnginePlatform::pullDownTo(const QString &text)
 
 void SailfishEnginePlatform::pullDownTo(int index)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << index;
 
@@ -241,7 +245,7 @@ void SailfishEnginePlatform::pullDownTo(int index)
 
 void SailfishEnginePlatform::pushUpTo(const QString &text)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << text;
 
@@ -294,7 +298,7 @@ void SailfishEnginePlatform::pushUpTo(const QString &text)
 
 void SailfishEnginePlatform::pushUpTo(int index)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << index;
 
@@ -347,7 +351,7 @@ void SailfishEnginePlatform::pushUpTo(int index)
 
 void SailfishEnginePlatform::scrollToItem(QQuickItem *item)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << item;
 
@@ -373,7 +377,7 @@ void SailfishEnginePlatform::scrollToItem(QQuickItem *item)
 
 QObjectList SailfishEnginePlatform::openContextMenu(QQuickItem *item)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << item;
 
@@ -386,7 +390,7 @@ QObjectList SailfishEnginePlatform::openContextMenu(QQuickItem *item)
 
 void SailfishEnginePlatform::clickContextMenuItem(QQuickItem *item, const QString &text, bool partial)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << item << text << partial;
 
@@ -402,7 +406,7 @@ void SailfishEnginePlatform::clickContextMenuItem(QQuickItem *item, const QStrin
 
 void SailfishEnginePlatform::clickContextMenuItem(QQuickItem *item, int index)
 {
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << item << index;
 
@@ -416,7 +420,7 @@ void SailfishEnginePlatform::clickContextMenuItem(QQuickItem *item, int index)
 
 void SailfishEnginePlatform::waitForPageChange(int timeout)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << timeout;
 
@@ -426,7 +430,7 @@ void SailfishEnginePlatform::waitForPageChange(int timeout)
 
 void SailfishEnginePlatform::swipe(SailfishEnginePlatform::SwipeDirection direction)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << direction;
 
@@ -451,7 +455,7 @@ void SailfishEnginePlatform::swipe(SailfishEnginePlatform::SwipeDirection direct
 
 void SailfishEnginePlatform::peek(SailfishEnginePlatform::PeekDirection direction)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << direction;
 
@@ -501,7 +505,7 @@ void SailfishEnginePlatform::enterCode(const QString &code)
 
 void SailfishEnginePlatform::goBack()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO;
 
     clickPoint(10, 10);
@@ -509,7 +513,7 @@ void SailfishEnginePlatform::goBack()
 
 void SailfishEnginePlatform::goForward()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO;
 
     QQuickItem *rootItem = getApplicationWindow();
@@ -518,9 +522,11 @@ void SailfishEnginePlatform::goForward()
 
 void SailfishEnginePlatform::initialize()
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << m_rootQuickItem;
+
+    QuickEnginePlatform::initialize();
 
     QDBusConnection::systemBus().connect(
         QString(),
@@ -529,8 +535,6 @@ void SailfishEnginePlatform::initialize()
         QStringLiteral("PropertiesChanged"),
         this,
         SLOT(bridgeStatusChanged(QString, QVariantMap, QStringList)));
-
-    QuickEnginePlatform::initialize();
 
     QFile blacklist(QStringLiteral("/etc/qapreload-blacklist"));
     if (blacklist.exists() && blacklist.open(QFile::ReadOnly)) {
@@ -541,24 +545,24 @@ void SailfishEnginePlatform::initialize()
             blacklisted.append(parts.last());
             m_blacklistedProperties.insert(parts.first(), blacklisted);
         }
-        qDebug()
+        qCDebug(categorySailfishEnginePlatform)
             << "Blacklist:"
             << m_blacklistedProperties;
     }
 
     if (!m_rootQuickItem) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No root item!";
         return;
     }
 
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << m_rootQuickItem->window();
 
     if (m_rootQuickItem->childItems().isEmpty()) { // probably declarative cache
-        qDebug()
+        qCDebug(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No childrens! Waiting for population...";
         connect(m_rootQuickItem, &QQuickItem::childrenChanged,
@@ -568,12 +572,12 @@ void SailfishEnginePlatform::initialize()
 
 void SailfishEnginePlatform::activateAppCommand(QTcpSocket *socket, const QString &appName)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << appName;
 
     if (appName != QAEngine::processName()) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << appName << "is not" << QAEngine::processName();
         socketReply(socket, QString(), 1);
@@ -581,21 +585,21 @@ void SailfishEnginePlatform::activateAppCommand(QTcpSocket *socket, const QStrin
     }
 
     if (!m_rootWindow) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No window!";
         return;
     }
 
     if (!m_rootQuickItem) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No root item!";
         return;
     }
 
     if (m_rootQuickItem->childItems().isEmpty()) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No child items!";
         return;
@@ -610,12 +614,12 @@ void SailfishEnginePlatform::activateAppCommand(QTcpSocket *socket, const QStrin
 
 void SailfishEnginePlatform::queryAppStateCommand(QTcpSocket *socket, const QString &appName)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << appName;
 
     if (appName != QAEngine::processName()) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << appName << "is not" << QAEngine::processName();
         socketReply(socket, QString(), 1);
@@ -623,21 +627,21 @@ void SailfishEnginePlatform::queryAppStateCommand(QTcpSocket *socket, const QStr
     }
 
     if (!m_rootWindow) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No window!";
         return;
     }
 
-    qDebug() << m_rootQuickItem;
+    qCDebug(categorySailfishEnginePlatform) << m_rootQuickItem;
     if (m_rootQuickItem->childItems().isEmpty()) {
-        qWarning()
+        qCWarning(categorySailfishEnginePlatform)
             << Q_FUNC_INFO
             << "No children!";
 
         socketReply(socket, QStringLiteral("NOT_RUNNING"));
     } else {
-        qDebug() << m_rootQuickWindow;
+        qCDebug(categorySailfishEnginePlatform) << m_rootQuickWindow;
     }
 
     const bool isAppActive = m_rootWindow->isActive();
@@ -646,7 +650,7 @@ void SailfishEnginePlatform::queryAppStateCommand(QTcpSocket *socket, const QStr
 
 void SailfishEnginePlatform::backCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -656,7 +660,7 @@ void SailfishEnginePlatform::backCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::forwardCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -666,7 +670,7 @@ void SailfishEnginePlatform::forwardCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::getOrientationCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -677,7 +681,7 @@ void SailfishEnginePlatform::getOrientationCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::setOrientationCommand(QTcpSocket *socket, const QString &orientation)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << orientation;
 
@@ -688,7 +692,7 @@ void SailfishEnginePlatform::setOrientationCommand(QTcpSocket *socket, const QSt
 
 void SailfishEnginePlatform::hideKeyboardCommand(QTcpSocket *socket, const QString &strategy, const QString &key, double keyCode, const QString &keyName)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << strategy << key << keyCode << keyName;
 
@@ -698,7 +702,7 @@ void SailfishEnginePlatform::hideKeyboardCommand(QTcpSocket *socket, const QStri
 
 void SailfishEnginePlatform::isKeyboardShownCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -711,12 +715,12 @@ void SailfishEnginePlatform::isKeyboardShownCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::activateIMEEngineCommand(QTcpSocket *socket, const QVariant &engine)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << engine;
 
     const QString layout = engine.toString();
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << layout;
     MGConfItem enabled(QStringLiteral("/sailfish/text_input/enabled_layouts"));
@@ -731,7 +735,7 @@ void SailfishEnginePlatform::activateIMEEngineCommand(QTcpSocket *socket, const 
 
 void SailfishEnginePlatform::availableIMEEnginesCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -741,14 +745,14 @@ void SailfishEnginePlatform::availableIMEEnginesCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::getActiveIMEEngineCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 }
 
 void SailfishEnginePlatform::deactivateIMEEngineCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -758,7 +762,7 @@ void SailfishEnginePlatform::deactivateIMEEngineCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::isIMEActivatedCommand(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -767,7 +771,7 @@ void SailfishEnginePlatform::isIMEActivatedCommand(QTcpSocket *socket)
 
 void SailfishEnginePlatform::executeCommand_app_pullDownTo(QTcpSocket *socket, const QString &destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << destination;
 
@@ -777,7 +781,7 @@ void SailfishEnginePlatform::executeCommand_app_pullDownTo(QTcpSocket *socket, c
 
 void SailfishEnginePlatform::executeCommand_app_pullDownTo(QTcpSocket *socket, double destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << destination;
 
@@ -787,7 +791,7 @@ void SailfishEnginePlatform::executeCommand_app_pullDownTo(QTcpSocket *socket, d
 
 void SailfishEnginePlatform::executeCommand_app_pushUpTo(QTcpSocket *socket, const QString &destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << destination;
 
@@ -797,7 +801,7 @@ void SailfishEnginePlatform::executeCommand_app_pushUpTo(QTcpSocket *socket, con
 
 void SailfishEnginePlatform::executeCommand_app_pushUpTo(QTcpSocket *socket, double destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << destination;
 
@@ -807,7 +811,7 @@ void SailfishEnginePlatform::executeCommand_app_pushUpTo(QTcpSocket *socket, dou
 
 void SailfishEnginePlatform::executeCommand_app_clickContextMenuItem(QTcpSocket *socket, const QString &elementId, const QString &destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << elementId << destination;
 
@@ -820,7 +824,7 @@ void SailfishEnginePlatform::executeCommand_app_clickContextMenuItem(QTcpSocket 
 
 void SailfishEnginePlatform::executeCommand_app_clickContextMenuItem(QTcpSocket *socket, const QString &elementId, double destination)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << elementId << destination;
 
@@ -833,7 +837,7 @@ void SailfishEnginePlatform::executeCommand_app_clickContextMenuItem(QTcpSocket 
 
 void SailfishEnginePlatform::executeCommand_app_waitForPageChange(QTcpSocket *socket, double timeout)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << timeout;
 
@@ -843,7 +847,7 @@ void SailfishEnginePlatform::executeCommand_app_waitForPageChange(QTcpSocket *so
 
 void SailfishEnginePlatform::executeCommand_app_swipe(QTcpSocket *socket, const QString &directionString)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << directionString;
 
@@ -863,7 +867,7 @@ void SailfishEnginePlatform::executeCommand_app_swipe(QTcpSocket *socket, const 
 
 void SailfishEnginePlatform::executeCommand_app_peek(QTcpSocket *socket, const QString &directionString)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << directionString;
 
@@ -883,7 +887,7 @@ void SailfishEnginePlatform::executeCommand_app_peek(QTcpSocket *socket, const Q
 
 void SailfishEnginePlatform::executeCommand_app_goBack(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -893,7 +897,7 @@ void SailfishEnginePlatform::executeCommand_app_goBack(QTcpSocket *socket)
 
 void SailfishEnginePlatform::executeCommand_app_goForward(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -903,7 +907,7 @@ void SailfishEnginePlatform::executeCommand_app_goForward(QTcpSocket *socket)
 
 void SailfishEnginePlatform::executeCommand_app_enterCode(QTcpSocket *socket, const QString &code)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << code;
 
@@ -913,7 +917,7 @@ void SailfishEnginePlatform::executeCommand_app_enterCode(QTcpSocket *socket, co
 
 void SailfishEnginePlatform::executeCommand_app_scrollToItem(QTcpSocket *socket, const QString &elementId)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << elementId;
 
@@ -927,7 +931,7 @@ void SailfishEnginePlatform::executeCommand_app_scrollToItem(QTcpSocket *socket,
 
 void SailfishEnginePlatform::executeCommand_app_saveScreenshot(QTcpSocket *socket, const QString &fileName)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket << fileName;
 
@@ -956,7 +960,7 @@ void SailfishEnginePlatform::executeCommand_app_saveScreenshot(QTcpSocket *socke
 
 void SailfishEnginePlatform::executeCommand_app_dumpCurrentPage(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -971,7 +975,7 @@ void SailfishEnginePlatform::executeCommand_app_dumpCurrentPage(QTcpSocket *sock
 
 void SailfishEnginePlatform::executeCommand_app_dumpCover(QTcpSocket *socket)
 {
-    qWarning()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << socket;
 
@@ -1001,7 +1005,7 @@ void SailfishEnginePlatform::findStrategy_classname(QTcpSocket *socket, const QS
         items = findItemsByClassName(selector, parentItem);
     }
 
-    qDebug()
+    qCDebug(categorySailfishEnginePlatform)
         << Q_FUNC_INFO
         << selector << multiple << items;
     elementReply(socket, items, multiple);

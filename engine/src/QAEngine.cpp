@@ -10,6 +10,7 @@
 #include <QWindow>
 #include <QTimer>
 #include <QQuickWindow>
+#include <QDir>
 
 #if defined Q_OS_SAILFISH
 #include "SailfishEnginePlatform.hpp"
@@ -159,6 +160,10 @@ QAEngine::QAEngine(QObject *parent)
     : QObject(parent)
 {
     qRegisterMetaType<QTcpSocket*>();
+
+    if (QFileInfo::exists(QDir::home().filePath(QStringLiteral(".qapreload-logging")))) {
+        QLoggingCategory::setFilterRules("omp.qaengine.*.debug=true");
+    }
 }
 
 QAEngine::~QAEngine()

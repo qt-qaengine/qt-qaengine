@@ -1298,7 +1298,7 @@ void GenericEnginePlatform::performActionsCommand(QTcpSocket *socket, const QVar
 {
     qCDebug(categoryGenericEnginePlatform)
         << Q_FUNC_INFO
-        << socket << paramsArg;
+        << socket;
 
     QVariantList pointerArgs;
     QVariantList keyArgs;
@@ -1317,8 +1317,10 @@ void GenericEnginePlatform::performActionsCommand(QTcpSocket *socket, const QVar
     }
 
     if (!keyArgs.isEmpty()) {
-
+        m_keyEngine->performChainActions(keyArgs);
     }
+
+    socketReply(socket, QString());
 }
 
 void GenericEnginePlatform::findStrategy_id(QTcpSocket *socket, const QString &selector, bool multiple, QObject *parentItem)

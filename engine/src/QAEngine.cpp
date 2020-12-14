@@ -49,6 +49,15 @@ bool QAEngine::isLoaded()
     return s_instance;
 }
 
+void QAEngine::objectCreated(QObject *o)
+{
+    if (!s_instance) {
+        return;
+    }
+
+    s_instance->addItem(o);
+}
+
 void QAEngine::objectRemoved(QObject *o)
 {
     if (!s_instance) {
@@ -223,6 +232,13 @@ bool QAEngine::metaInvoke(QTcpSocket *socket, QObject *object, const QString &me
         *implemented = false;
     }
     return false;
+}
+
+void QAEngine::addItem(QObject *o)
+{
+    if (auto platform = getPlatform(true)) {
+        platform->addItem(o);
+    }
 }
 
 void QAEngine::removeItem(QObject *o)

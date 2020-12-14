@@ -134,7 +134,7 @@ void QAEngine::onPlatformReady()
         return;
     }
 
-    s_processName = QFileInfo(qApp->arguments().first()).baseName();
+    s_processName = QFileInfo(qApp->arguments().first()).baseName();;
     qCDebug(categoryEngine)
         << Q_FUNC_INFO
         << "Process name:" << s_processName
@@ -144,8 +144,8 @@ void QAEngine::onPlatformReady()
         m_client = new QAEngineSocketClient(this);
         connect(m_client, &QAEngineSocketClient::commandReceived,
                 this, &QAEngine::processCommand);
-        m_client->connectToBridge();
     }
+    m_client->connectToBridge();
 }
 
 QAEngine *QAEngine::instance()

@@ -67,7 +67,7 @@ rm -rf %{buildroot}
 %qmake5_install
 
 %pre
-/usr/bin/env systemctl disable qabridge.service
+/usr/bin/env systemctl disable qabridge.service ||:
 
 %post
 /usr/bin/env systemctl daemon-reload
@@ -81,7 +81,7 @@ rm -rf %{buildroot}
 /usr/bin/env systemctl-user restart booster-silica-qt5.service
 
 %pre ld
-/usr/bin/env systemctl disable qabridge.socket
+/usr/bin/env systemctl disable qabridge.socket ||:
 
 %post ld
 if grep libqapreloadhook /etc/ld.so.preload > /dev/null; then

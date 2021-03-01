@@ -93,7 +93,7 @@ void GenericEnginePlatform::elementReply(QTcpSocket *socket, QObjectList element
 
 void GenericEnginePlatform::addItem(QObject *o)
 {
-
+    Q_UNUSED(o)
 }
 
 void GenericEnginePlatform::removeItem(QObject *o)
@@ -267,7 +267,7 @@ QObjectList GenericEnginePlatform::findItemsByXpath(const QString &xpath, QObjec
         if (reader.isStartElement()) {
             const QString elementId = reader.attributes().value(QStringLiteral("id")).toString();
             const QString address = elementId.section(QChar(u'x'), -1);
-            const uint integer = address.toUInt(NULL, 16);
+            const quintptr integer = address.toUInt(NULL, 16);
             QObject *item = reinterpret_cast<QObject*>(integer);
             items.append(item);
             reader.skipCurrentElement();

@@ -32,6 +32,7 @@ namespace {
 QAEngine *s_instance = nullptr;
 
 QString s_processName = "qaengine";
+bool s_exiting = false;
 
 QHash<QWindow*, IEnginePlatform*> s_windows;
 QWindow *s_lastFocusWindow = nullptr;
@@ -128,6 +129,12 @@ void QAEngine::initialize()
 
     setParent(qGuiApp);
 
+    connect(qApp, &QCoreApplication::aboutToQuit, []() {
+        qCDebug(categoryEngine)
+            << Q_FUNC_INFO << "about to quit!";
+        s_exiting = true;
+    });
+
     connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &QAEngine::onFocusWindowChanged);
     if (!qGuiApp->topLevelWindows().isEmpty()) {
         onFocusWindowChanged(qGuiApp->topLevelWindows().first());
@@ -168,7 +175,9 @@ void QAEngine::onFocusWindowChanged(QWindow *window)
 #endif
         connect(platform, &IEnginePlatform::ready, this, &QAEngine::onPlatformReady);
         connect(window, &QWindow::destroyed, [window]() {
-            s_windows.remove(window);
+            if (!s_exiting) {
+                s_windows.remove(window);
+            }
         });
         QTimer::singleShot(0, platform, &IEnginePlatform::initialize);
 
@@ -289,6 +298,9 @@ void QAEngine::addItem(QObject *o)
 
 void QAEngine::removeItem(QObject *o)
 {
+    if (s_exiting) {
+        return;
+    }
     if (auto platform = getPlatform(true)) {
         platform->removeItem(o);
     }

@@ -1,8 +1,12 @@
 #include "SailfishBridgePlatform.hpp"
 #include "QAScreenRecorder.hpp"
+#include "LocalSocketServer.hpp"
+#include "ITransportClient.hpp"
+#include "QABridge.hpp"
 
 #include <Transaction>
 #include <Daemon>
+#include <QTimer>
 
 #include <rpm/rpmlib.h>
 #include <rpm/header.h>
@@ -52,10 +56,13 @@ QDBusConnection getSessionBus(const QString &sessionName = QStringLiteral("qabri
     return bus;
 }
 
+const QString c_localSocket = QStringLiteral("/usr/share/qt5/qapreload/socket");
+
 }
 
 SailfishBridgePlatform::SailfishBridgePlatform(QObject *parent)
     : LinuxBridgePlatform(parent)
+    , m_rpc(new LocalSocketServer(c_localSocket, this))
 {
     qDebug()
         << Q_FUNC_INFO;
@@ -93,26 +100,40 @@ SailfishBridgePlatform::SailfishBridgePlatform(QObject *parent)
             this,
             SLOT(userNew(uint, QDBusObjectPath)));
     }
+
+    connect(m_rpc, &LocalSocketServer::commandReceived,
+            m_bridge, &QABridge::processCommand);
+    connect(m_rpc, &LocalSocketServer::clientLost,
+            m_bridge, &QABridge::removeClient);
+    QTimer::singleShot(0, m_rpc, &ITransportServer::start);
 }
 
-pid_t SailfishBridgePlatform::findProcess(const char *appName)
+pid_t SailfishBridgePlatform::findProcess(const QString &appName)
 {
     pid_t pid = -1;
 
     QProcess process;
-    QString pgm("/sbin/pidof");
-    QStringList args = QStringList() << appName;
-    process.start(pgm, args);
+    process.start(QStringLiteral("/sbin/pidof"), {appName});
     process.waitForFinished();
-    QString stdout = QString::fromUtf8(process.readAllStandardOutput());
-    if (!stdout.isEmpty()) {
-        pid = stdout.toInt();
+    auto sout = process.readAllStandardOutput();
+    if (sout.right(1) == "\n") {
+        sout = sout.left(sout.size() - 1);
+    }
+    if (sout.isEmpty()) {
+        return pid;
+    }
+    if (!sout.isEmpty()) {
+        bool ok = false;
+        pid = sout.toInt(&ok);
+        if (!ok) {
+            return -1;
+        }
     }
 
     return pid;
 }
 
-void SailfishBridgePlatform::installAppCommand(QTcpSocket *socket, const QString &appPath)
+void SailfishBridgePlatform::installAppCommand(ITransportClient *socket, const QString &appPath)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -133,7 +154,7 @@ void SailfishBridgePlatform::installAppCommand(QTcpSocket *socket, const QString
     socketReply(socket, QString(), 0);
 }
 
-void SailfishBridgePlatform::removeAppCommand(QTcpSocket *socket, const QString &appName)
+void SailfishBridgePlatform::removeAppCommand(ITransportClient *socket, const QString &appName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -170,7 +191,7 @@ void SailfishBridgePlatform::removeAppCommand(QTcpSocket *socket, const QString 
     socketReply(socket, QString(), 0);
 }
 
-void SailfishBridgePlatform::isAppInstalledCommand(QTcpSocket *socket, const QString &rpmName)
+void SailfishBridgePlatform::isAppInstalledCommand(ITransportClient *socket, const QString &rpmName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -200,7 +221,7 @@ void SailfishBridgePlatform::isAppInstalledCommand(QTcpSocket *socket, const QSt
     socketReply(socket, isInstalled);
 }
 
-void SailfishBridgePlatform::lockCommand(QTcpSocket *socket, double seconds)
+void SailfishBridgePlatform::lockCommand(ITransportClient *socket, double seconds)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -220,7 +241,7 @@ void SailfishBridgePlatform::lockCommand(QTcpSocket *socket, double seconds)
     }
 }
 
-void SailfishBridgePlatform::unlockCommand(QTcpSocket *socket)
+void SailfishBridgePlatform::unlockCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -252,7 +273,7 @@ void SailfishBridgePlatform::unlockCommand(QTcpSocket *socket)
     }
 }
 
-void SailfishBridgePlatform::isLockedCommand(QTcpSocket *socket)
+void SailfishBridgePlatform::isLockedCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -273,7 +294,7 @@ void SailfishBridgePlatform::isLockedCommand(QTcpSocket *socket)
     }
 }
 
-void SailfishBridgePlatform::setNetworkConnectionCommand(QTcpSocket *socket, double connectionType)
+void SailfishBridgePlatform::setNetworkConnectionCommand(ITransportClient *socket, double connectionType)
 {
     const int networkConnectionType = static_cast<int>(connectionType);
     qDebug()
@@ -338,7 +359,7 @@ void SailfishBridgePlatform::setNetworkConnectionCommand(QTcpSocket *socket, dou
     socketReply(socket, QString());
 }
 
-void SailfishBridgePlatform::getNetworkConnectionCommand(QTcpSocket *socket)
+void SailfishBridgePlatform::getNetworkConnectionCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -367,7 +388,7 @@ void SailfishBridgePlatform::getNetworkConnectionCommand(QTcpSocket *socket)
     socketReply(socket, connection);
 }
 
-void SailfishBridgePlatform::startRecordingScreenCommand(QTcpSocket *socket, const QVariant &arguments)
+void SailfishBridgePlatform::startRecordingScreenCommand(ITransportClient *socket, const QVariant &arguments)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -386,7 +407,7 @@ void SailfishBridgePlatform::startRecordingScreenCommand(QTcpSocket *socket, con
     socketReply(socket, QStringLiteral("started"));
 }
 
-void SailfishBridgePlatform::stopRecordingScreenCommand(QTcpSocket *socket, const QVariant &arguments)
+void SailfishBridgePlatform::stopRecordingScreenCommand(ITransportClient *socket, const QVariant &arguments)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -404,7 +425,7 @@ void SailfishBridgePlatform::stopRecordingScreenCommand(QTcpSocket *socket, cons
     socketReply(socket, m_screenrecorder->lastFilename());
 }
 
-void SailfishBridgePlatform::executeCommand_system_unlock(QTcpSocket *socket, const QVariant &executableArg, const QVariant &paramsArg)
+void SailfishBridgePlatform::executeCommand_system_unlock(ITransportClient *socket, const QVariant &executableArg, const QVariant &paramsArg)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -492,45 +513,47 @@ bool SailfishBridgePlatform::lauchAppStandalone(const QString &appName, const QS
         << Q_FUNC_INFO
         << appName << arguments;
 
-    if (findProcess(appName.toLocal8Bit()) == -1) {
+    auto pid = findProcess(appName);
+    if (pid <= 0) {
         QDBusMessage launch = QDBusMessage::createMethodCall(QStringLiteral("ru.qaengine.qaservice"),
                                                              QStringLiteral("/ru/qaengine/qaservice"),
                                                              QStringLiteral("ru.qaengine.qaservice"),
                                                              QStringLiteral("launchApp"));
         launch.setArguments({ appName, arguments });
-        if(!getSessionBus(QStringLiteral("session-") + appName).send(launch)) {
+        if (!getSessionBus(QStringLiteral("session-") + appName).send(launch)) {
             return false;
         }
-    }
-
-    QEventLoop loop;
-    QTimer timer;
-    for (int i = 0; i < 10; i++) {
-        if (findProcess(appName.toLocal8Bit()) != -1) {
-            continue;
-        } else {
-            qDebug() << Q_FUNC_INFO << "Counter IS:" << i;
-            connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-            timer.start(1500);
-            loop.exec();
+        for (int i = 0; i < 10; i++) {
+            pid = findProcess(appName);
+            if (pid > 0) {
+                continue;
+            } else {
+                qDebug() << Q_FUNC_INFO << "Counter IS:" << i;
+                QEventLoop loop;
+                QTimer::singleShot(1500, &loop, &QEventLoop::quit);
+                loop.exec();
+            }
         }
     }
+    if (pid <= 0) {
+        qWarning() << Q_FUNC_INFO << "Unable to find pid for:" << appName;
+        return false;
+    }
 
-   if (m_applicationSocket.value(appName, nullptr) == nullptr) {
+    if (m_applicationSocket.value(appName, nullptr) == nullptr) {
         injector_t *injector;
-        pid_t pid= findProcess(appName.toLocal8Bit());
-        qDebug() << Q_FUNC_INFO << "Start to attach injector to pid " << pid ;
+        qDebug() << Q_FUNC_INFO << "Start to attach injector to pid:" << pid ;
 
         if(injector_attach(&injector, pid) != 0) {
-            qDebug() << Q_FUNC_INFO << "Failed to attach injector";
+            qWarning() << Q_FUNC_INFO << "Failed to attach injector";
             return false;
         }
         if(injector_inject(injector, "/usr/lib/libqaengine.so", NULL) != 0) {
-            qDebug() << Q_FUNC_INFO << "Failed to inject injector";
+            qWarning() << Q_FUNC_INFO << "Failed to inject injector";
             return false;
         }
         if(injector_detach(injector) != 0) {
-            qDebug() << Q_FUNC_INFO << "Failed to Detach injector";
+            qWarning() << Q_FUNC_INFO << "Failed to Detach injector";
             return false;
         }
     }

@@ -13,6 +13,8 @@
 #include <QDir>
 #include <QDateTime>
 
+#include "ITransportClient.hpp"
+
 #if defined Q_OS_SAILFISH
 #include "SailfishEnginePlatform.hpp"
 #else
@@ -44,6 +46,7 @@ inline QGenericArgument qVariantToArgument(const QVariant &variant) {
     return QGenericArgument();
 }
 
+#ifdef Q_OS_WIN
 void fileOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     QFile logFile;
@@ -73,6 +76,7 @@ void fileOutput(QtMsgType type, const QMessageLogContext &context, const QString
     }
     logFile.write(log.toUtf8());
 }
+#endif
 
 }
 
@@ -225,7 +229,7 @@ QAEngine::QAEngine(QObject *parent)
 {
     qRegisterMetaType<QTcpSocket*>();
 
-    if (QDir::home().exists(QStringLiteral(".qapreload-logging"))) {
+    if (QFileInfo::exists("/usr/share/qt5/qapreload/qapreload-logging")) {
         QLoggingCategory::setFilterRules("omp.qaengine.*.debug=true");
     } else {
         QLoggingCategory::setFilterRules("omp.qaengine.*.warning=true");
@@ -241,7 +245,7 @@ QString QAEngine::processName()
     return s_processName;
 }
 
-bool QAEngine::metaInvoke(QTcpSocket *socket, QObject *object, const QString &methodName, const QVariantList &params, bool *implemented)
+bool QAEngine::metaInvoke(ITransportClient *socket, QObject *object, const QString &methodName, const QVariantList &params, bool *implemented)
 {
     auto mo = object->metaObject();
     do {
@@ -269,7 +273,7 @@ bool QAEngine::metaInvoke(QTcpSocket *socket, QObject *object, const QString &me
                     object,
                     methodName.toLatin1().constData(),
                     Qt::DirectConnection,
-                    Q_ARG(QTcpSocket*, socket),
+                    Q_ARG(ITransportClient*, socket),
                     arguments[0],
                     arguments[1],
                     arguments[2],
@@ -309,7 +313,7 @@ void QAEngine::removeItem(QObject *o)
     }
 }
 
-void QAEngine::processCommand(QTcpSocket *socket, const QByteArray &cmd)
+void QAEngine::processCommand(ITransportClient *socket, const QByteArray &cmd)
 {
     qCDebug(categoryEngine)
         << Q_FUNC_INFO
@@ -341,7 +345,7 @@ void QAEngine::processCommand(QTcpSocket *socket, const QByteArray &cmd)
     processAppiumCommand(socket, action, params);
 }
 
-bool QAEngine::processAppiumCommand(QTcpSocket *socket, const QString &action, const QVariantList &params)
+bool QAEngine::processAppiumCommand(ITransportClient *socket, const QString &action, const QVariantList &params)
 {
     const QString methodName = QStringLiteral("%1Command").arg(action);
     qCDebug(categoryEngine)

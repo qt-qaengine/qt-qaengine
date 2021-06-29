@@ -1,6 +1,8 @@
 #include "GenericBridgePlatform.hpp"
+#include "ITransportServer.hpp"
 #include "QABridge.hpp"
 
+#include <ITransportClient.hpp>
 #include <QDateTime>
 #include <QEventLoop>
 #include <QFile>
@@ -21,9 +23,11 @@ GenericBridgePlatform::GenericBridgePlatform(QObject *parent)
 {
     qDebug()
         << Q_FUNC_INFO;
+
+    m_bridge = qobject_cast<QABridge*>(parent);
 }
 
-void GenericBridgePlatform::appConnect(QTcpSocket *socket, const QString &appName)
+void GenericBridgePlatform::appConnect(ITransportClient *socket, const QString &appName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -40,7 +44,7 @@ void GenericBridgePlatform::appConnect(QTcpSocket *socket, const QString &appNam
     m_applicationSocket.insert(appName, socket);
 }
 
-void GenericBridgePlatform::appReply(QTcpSocket *socket, const QByteArray &cmd)
+void GenericBridgePlatform::appReply(ITransportClient *socket, const QByteArray &cmd)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -57,7 +61,7 @@ void GenericBridgePlatform::appReply(QTcpSocket *socket, const QByteArray &cmd)
     emit applicationReply(socket, appName, cmd);
 }
 
-void GenericBridgePlatform::removeClient(QTcpSocket *socket)
+void GenericBridgePlatform::removeClient(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -76,7 +80,7 @@ void GenericBridgePlatform::removeClient(QTcpSocket *socket)
     }
 }
 
-void GenericBridgePlatform::execute(QTcpSocket *socket, const QString &methodName, const QVariantList &params)
+void GenericBridgePlatform::execute(ITransportClient *socket, const QString &methodName, const QVariantList &params)
 {
     bool handled = false;
     bool success = QABridge::metaInvoke(socket, this, methodName, params, &handled);
@@ -89,7 +93,7 @@ void GenericBridgePlatform::execute(QTcpSocket *socket, const QString &methodNam
     }
 }
 
-void GenericBridgePlatform::initializeCommand(QTcpSocket *socket, const QString &appName)
+void GenericBridgePlatform::initializeCommand(ITransportClient *socket, const QString &appName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -117,7 +121,7 @@ void GenericBridgePlatform::initializeCommand(QTcpSocket *socket, const QString 
     }
 }
 
-void GenericBridgePlatform::appConnectCommand(QTcpSocket *socket)
+void GenericBridgePlatform::appConnectCommand(ITransportClient *socket)
 {
     const QString appName = m_socketAppName.value(socket);
     qDebug()
@@ -127,7 +131,7 @@ void GenericBridgePlatform::appConnectCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::appDisconnectCommand(QTcpSocket *socket, bool autoLaunch)
+void GenericBridgePlatform::appDisconnectCommand(ITransportClient *socket, bool autoLaunch)
 {
     const QString appName = m_socketAppName.value(socket);
     qDebug()
@@ -148,10 +152,9 @@ void GenericBridgePlatform::appDisconnectCommand(QTcpSocket *socket, bool autoLa
     if (socket->isOpen()) {
         socket->close();
     }
-
 }
 
-void GenericBridgePlatform::startActivityCommand(QTcpSocket *socket, const QString &appName, const QVariantList &params)
+void GenericBridgePlatform::startActivityCommand(ITransportClient *socket, const QString &appName, const QVariantList &params)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -171,7 +174,7 @@ void GenericBridgePlatform::startActivityCommand(QTcpSocket *socket, const QStri
 
 }
 
-void GenericBridgePlatform::installAppCommand(QTcpSocket *socket, const QString &appPath)
+void GenericBridgePlatform::installAppCommand(ITransportClient *socket, const QString &appPath)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -180,7 +183,7 @@ void GenericBridgePlatform::installAppCommand(QTcpSocket *socket, const QString 
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::activateAppCommand(QTcpSocket *socket, const QString &appId)
+void GenericBridgePlatform::activateAppCommand(ITransportClient *socket, const QString &appId)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -198,7 +201,7 @@ void GenericBridgePlatform::activateAppCommand(QTcpSocket *socket, const QString
 
 }
 
-void GenericBridgePlatform::terminateAppCommand(QTcpSocket *socket, const QString &appId)
+void GenericBridgePlatform::terminateAppCommand(ITransportClient *socket, const QString &appId)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -216,7 +219,7 @@ void GenericBridgePlatform::terminateAppCommand(QTcpSocket *socket, const QStrin
     }
 }
 
-void GenericBridgePlatform::removeAppCommand(QTcpSocket *socket, const QString &appName)
+void GenericBridgePlatform::removeAppCommand(ITransportClient *socket, const QString &appName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -225,7 +228,7 @@ void GenericBridgePlatform::removeAppCommand(QTcpSocket *socket, const QString &
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::isAppInstalledCommand(QTcpSocket *socket, const QString &rpmName)
+void GenericBridgePlatform::isAppInstalledCommand(ITransportClient *socket, const QString &rpmName)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -234,7 +237,7 @@ void GenericBridgePlatform::isAppInstalledCommand(QTcpSocket *socket, const QStr
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::queryAppStateCommand(QTcpSocket *socket, const QString &appName)
+void GenericBridgePlatform::queryAppStateCommand(ITransportClient *socket, const QString &appName)
 {
     if (!m_applicationSocket.contains(appName)) {
         socketReply(socket, QStringLiteral("NOT_RUNNING"));
@@ -245,7 +248,7 @@ void GenericBridgePlatform::queryAppStateCommand(QTcpSocket *socket, const QStri
     }
 }
 
-void GenericBridgePlatform::pushFileCommand(QTcpSocket *socket, const QString &path, const QString &data)
+void GenericBridgePlatform::pushFileCommand(ITransportClient *socket, const QString &path, const QString &data)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -275,7 +278,7 @@ void GenericBridgePlatform::pushFileCommand(QTcpSocket *socket, const QString &p
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::pullFileCommand(QTcpSocket *socket, const QString &path)
+void GenericBridgePlatform::pullFileCommand(ITransportClient *socket, const QString &path)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -297,7 +300,7 @@ void GenericBridgePlatform::pullFileCommand(QTcpSocket *socket, const QString &p
     socketReply(socket, data.toBase64());
 }
 
-void GenericBridgePlatform::lockCommand(QTcpSocket *socket, double seconds)
+void GenericBridgePlatform::lockCommand(ITransportClient *socket, double seconds)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -306,7 +309,7 @@ void GenericBridgePlatform::lockCommand(QTcpSocket *socket, double seconds)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::unlockCommand(QTcpSocket *socket)
+void GenericBridgePlatform::unlockCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -315,7 +318,7 @@ void GenericBridgePlatform::unlockCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::isLockedCommand(QTcpSocket *socket)
+void GenericBridgePlatform::isLockedCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -324,7 +327,7 @@ void GenericBridgePlatform::isLockedCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::launchAppCommand(QTcpSocket *socket)
+void GenericBridgePlatform::launchAppCommand(ITransportClient *socket)
 {
     const QString appName = m_socketAppName.value(socket);
     qDebug()
@@ -355,7 +358,7 @@ void GenericBridgePlatform::launchAppCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::closeAppCommand(QTcpSocket *socket)
+void GenericBridgePlatform::closeAppCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -390,7 +393,7 @@ void GenericBridgePlatform::closeAppCommand(QTcpSocket *socket)
     }
 }
 
-void GenericBridgePlatform::getCurrentContextCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getCurrentContextCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -399,7 +402,7 @@ void GenericBridgePlatform::getCurrentContextCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getDeviceTimeCommand(QTcpSocket *socket, const QString &dateFormat)
+void GenericBridgePlatform::getDeviceTimeCommand(ITransportClient *socket, const QString &dateFormat)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -412,7 +415,7 @@ void GenericBridgePlatform::getDeviceTimeCommand(QTcpSocket *socket, const QStri
     socketReply(socket, time);
 }
 
-void GenericBridgePlatform::setNetworkConnectionCommand(QTcpSocket *socket, double connectionType)
+void GenericBridgePlatform::setNetworkConnectionCommand(ITransportClient *socket, double connectionType)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -421,7 +424,7 @@ void GenericBridgePlatform::setNetworkConnectionCommand(QTcpSocket *socket, doub
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getNetworkConnectionCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getNetworkConnectionCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -430,7 +433,7 @@ void GenericBridgePlatform::getNetworkConnectionCommand(QTcpSocket *socket)
     socketReply(socket, NetworkConnectionWifi);
 }
 
-void GenericBridgePlatform::resetCommand(QTcpSocket *socket)
+void GenericBridgePlatform::resetCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -438,7 +441,7 @@ void GenericBridgePlatform::resetCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::mobileShakeCommand(QTcpSocket *socket)
+void GenericBridgePlatform::mobileShakeCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -446,7 +449,7 @@ void GenericBridgePlatform::mobileShakeCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getSettingsCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getSettingsCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -454,7 +457,7 @@ void GenericBridgePlatform::getSettingsCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getContextsCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getContextsCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -462,7 +465,7 @@ void GenericBridgePlatform::getContextsCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getCurrentPackageCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getCurrentPackageCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -470,7 +473,7 @@ void GenericBridgePlatform::getCurrentPackageCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::toggleLocationServicesCommand(QTcpSocket *socket)
+void GenericBridgePlatform::toggleLocationServicesCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -478,7 +481,7 @@ void GenericBridgePlatform::toggleLocationServicesCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::openNotificationsCommand(QTcpSocket *socket)
+void GenericBridgePlatform::openNotificationsCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -486,7 +489,7 @@ void GenericBridgePlatform::openNotificationsCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getGeoLocationCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getGeoLocationCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -494,7 +497,7 @@ void GenericBridgePlatform::getGeoLocationCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getLogTypesCommand(QTcpSocket *socket)
+void GenericBridgePlatform::getLogTypesCommand(ITransportClient *socket)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -502,7 +505,7 @@ void GenericBridgePlatform::getLogTypesCommand(QTcpSocket *socket)
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::getLogCommand(QTcpSocket *socket, const QString &type)
+void GenericBridgePlatform::getLogCommand(ITransportClient *socket, const QString &type)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -510,7 +513,7 @@ void GenericBridgePlatform::getLogCommand(QTcpSocket *socket, const QString &typ
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::setGeoLocationCommand(QTcpSocket *socket, const QVariant &location)
+void GenericBridgePlatform::setGeoLocationCommand(ITransportClient *socket, const QVariant &location)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -518,7 +521,7 @@ void GenericBridgePlatform::setGeoLocationCommand(QTcpSocket *socket, const QVar
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::startRecordingScreenCommand(QTcpSocket *socket, const QVariant &arguments)
+void GenericBridgePlatform::startRecordingScreenCommand(ITransportClient *socket, const QVariant &arguments)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -526,7 +529,7 @@ void GenericBridgePlatform::startRecordingScreenCommand(QTcpSocket *socket, cons
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::stopRecordingScreenCommand(QTcpSocket *socket, const QVariant &arguments)
+void GenericBridgePlatform::stopRecordingScreenCommand(ITransportClient *socket, const QVariant &arguments)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -534,7 +537,7 @@ void GenericBridgePlatform::stopRecordingScreenCommand(QTcpSocket *socket, const
     socketReply(socket, QString());
 }
 
-void GenericBridgePlatform::executeCommand(QTcpSocket *socket, const QString &command, const QVariant &paramsArg)
+void GenericBridgePlatform::executeCommand(ITransportClient *socket, const QString &command, const QVariant &paramsArg)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -555,7 +558,7 @@ void GenericBridgePlatform::executeCommand(QTcpSocket *socket, const QString &co
     execute(socket, methodName, paramsArg.toList());
 }
 
-void GenericBridgePlatform::executeAsyncCommand(QTcpSocket *socket, const QString &command, const QVariant &paramsArg)
+void GenericBridgePlatform::executeAsyncCommand(ITransportClient *socket, const QString &command, const QVariant &paramsArg)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -576,7 +579,7 @@ void GenericBridgePlatform::executeAsyncCommand(QTcpSocket *socket, const QStrin
     execute(socket, methodName, paramsArg.toList());
 }
 
-void GenericBridgePlatform::executeCommand_system_shell(QTcpSocket *socket, const QVariant &executableArg, const QVariant &paramsArg)
+void GenericBridgePlatform::executeCommand_system_shell(ITransportClient *socket, const QVariant &executableArg, const QVariant &paramsArg)
 {
     qDebug()
         << Q_FUNC_INFO
@@ -601,7 +604,7 @@ void GenericBridgePlatform::executeCommand_system_shell(QTcpSocket *socket, cons
     socketReply(socket, stdOut, p.exitCode());
 }
 
-void GenericBridgePlatform::socketReply(QTcpSocket *socket, const QVariant &value, int status)
+void GenericBridgePlatform::socketReply(ITransportClient *socket, const QVariant &value, int status)
 {
     QJsonObject reply;
     reply.insert(QStringLiteral("status"), status);
@@ -616,7 +619,7 @@ void GenericBridgePlatform::socketReply(QTcpSocket *socket, const QVariant &valu
     socket->flush();
 }
 
-void GenericBridgePlatform::forwardToApp(QTcpSocket *socket, const QByteArray &data)
+void GenericBridgePlatform::forwardToApp(ITransportClient *socket, const QByteArray &data)
 {
     if (!m_socketAppName.contains(socket)) {
         qWarning()
@@ -630,7 +633,7 @@ void GenericBridgePlatform::forwardToApp(QTcpSocket *socket, const QByteArray &d
     forwardToApp(socket, appName, data);
 }
 
-void GenericBridgePlatform::forwardToApp(QTcpSocket *socket, const QString &appName, const QByteArray &data)
+void GenericBridgePlatform::forwardToApp(ITransportClient *socket, const QString &appName, const QByteArray &data)
 {
     if (!m_applicationSocket.contains(appName)) {
         qWarning()
@@ -657,7 +660,7 @@ void GenericBridgePlatform::forwardToApp(QTcpSocket *socket, const QString &appN
         << bytes;
 }
 
-void GenericBridgePlatform::forwardToApp(QTcpSocket *socket, const QString &action, const QVariant &params)
+void GenericBridgePlatform::forwardToApp(ITransportClient *socket, const QString &action, const QVariant &params)
 {
     forwardToApp(socket, actionData(action, params));
 }
@@ -675,7 +678,7 @@ QByteArray GenericBridgePlatform::sendToAppSocket(const QString &appName, const 
     QByteArray appReplyData = QJsonDocument(reply).toJson(QJsonDocument::Compact);
     bool haveData = false;
 
-    QTcpSocket *socket = m_applicationSocket.value(appName, nullptr);
+    ITransportClient *socket = m_applicationSocket.value(appName, nullptr);
     if (!socket) {
         qDebug()
             << Q_FUNC_INFO
@@ -701,7 +704,7 @@ QByteArray GenericBridgePlatform::sendToAppSocket(const QString &appName, const 
     QMetaObject::Connection readyReadConnection = connect(
         this, &GenericBridgePlatform::applicationReply,
         [&appReplyData, &loop, &timer, &haveData]
-        (QTcpSocket *appSocket, const QString &appName, const QByteArray &data)
+        (ITransportClient *appSocket, const QString &appName, const QByteArray &data)
     {
         if (!haveData) {
             haveData = true;
@@ -722,17 +725,15 @@ QByteArray GenericBridgePlatform::sendToAppSocket(const QString &appName, const 
 
     });
 
-    QMetaObject::Connection stateChangedConnection = connect(socket, &QAbstractSocket::stateChanged, this, [&loop, &timer](QAbstractSocket::SocketState state) {
-        if (state != QAbstractSocket::ConnectedState) {
-            loop.quit();
-            timer.stop();
-        }
+    QMetaObject::Connection stateChangedConnection = connect(socket, &ITransportClient::disconnected, this, [&loop, &timer](ITransportClient*) {
+        loop.quit();
+        timer.stop();
     });
 
     socket->write(data);
     socket->waitForBytesWritten();
 
-    if (socket->state() == QAbstractSocket::ConnectedState) {
+    if (socket->isConnected()) {
         timer.start();
         loop.exec();
     }

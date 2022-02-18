@@ -1,3 +1,0 @@
-module ru.qaengine.sailfishtest
-plugin qaengine
-typeinfo plugins.qmltypes

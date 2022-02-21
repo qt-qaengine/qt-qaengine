@@ -1,4 +1,4 @@
-#include "TCPSocketClient.h"
+#include <qt_qa_engine/TCPSocketClient.h>
 
 #include <QDebug>
 #include <QTcpSocket>

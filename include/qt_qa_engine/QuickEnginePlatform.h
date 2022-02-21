@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GenericEnginePlatform.h"
+#include <qt_qa_engine/GenericEnginePlatform.h>
 
 #include <QJsonObject>
 

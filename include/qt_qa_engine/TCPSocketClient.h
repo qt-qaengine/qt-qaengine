@@ -1,5 +1,5 @@
 #pragma once
-#include "ITransportClient.h"
+#include <qt_qa_engine/ITransportClient.h>
 
 class QTcpSocket;
 class TCPSocketClient : public ITransportClient

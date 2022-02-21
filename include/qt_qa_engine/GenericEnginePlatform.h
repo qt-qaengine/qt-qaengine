@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IEnginePlatform.h"
+#include <qt_qa_engine/IEnginePlatform.h>
 
 class QAMouseEngine;
 class QAKeyEngine;

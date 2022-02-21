@@ -1,9 +1,9 @@
-#include "GenericEnginePlatform.h"
-#include "ITransportClient.h"
-#include "QAEngine.h"
-#include "QAKeyEngine.h"
-#include "QAMouseEngine.h"
-#include "QAPendingEvent.h"
+#include <qt_qa_engine/GenericEnginePlatform.h>
+#include <qt_qa_engine/ITransportClient.h>
+#include <qt_qa_engine/QAEngine.h>
+#include <qt_qa_engine/QAKeyEngine.h>
+#include <qt_qa_engine/QAMouseEngine.h>
+#include <qt_qa_engine/QAPendingEvent.h>
 
 #include <QClipboard>
 #include <QDebug>
@@ -17,7 +17,7 @@
 #include <QXmlStreamWriter>
 //#include <QXmlQuery>
 
-#include "qpa/qwindowsysteminterface_p.h"
+#include <qpa/qwindowsysteminterface_p.h>
 
 #include <QLoggingCategory>
 

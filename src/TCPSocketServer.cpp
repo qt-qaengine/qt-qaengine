@@ -1,5 +1,5 @@
-#include "TCPSocketServer.h"
-#include "TCPSocketClient.h"
+#include <qt_qa_engine/TCPSocketClient.h>
+#include <qt_qa_engine/TCPSocketServer.h>
 
 #include <QCoreApplication>
 #include <QTcpServer>

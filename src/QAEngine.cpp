@@ -1,4 +1,8 @@
-#include "QAEngine.h"
+#include <qt_qa_engine/ITransportClient.h>
+#include <qt_qa_engine/QAEngine.h>
+#include <qt_qa_engine/QAEngineSocketClient.h>
+#include <qt_qa_engine/QuickEnginePlatform.h>
+#include <qt_qa_engine/TCPSocketServer.h>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -13,13 +17,7 @@
 #include <QTimer>
 #include <QWindow>
 
-#include "ITransportClient.h"
-
-#include "QuickEnginePlatform.h"
 #include <QGuiApplication>
-
-#include "QAEngineSocketClient.h"
-#include "TCPSocketServer.h"
 
 #include <QLoggingCategory>
 

@@ -23,7 +23,7 @@
 
 #include <private/qhooks_p.h>
 
-Q_LOGGING_CATEGORY(categoryEngine, "qaengine.engine", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryEngine, "autoqa.qaengine.engine", QtWarningMsg)
 
 namespace
 {
@@ -226,7 +226,7 @@ QAEngine::QAEngine(QObject* parent)
     qRegisterMetaType<QTcpSocket*>();
     qRegisterMetaType<ITransportClient*>();
     qRegisterMetaType<ITransportServer*>();
-    QLoggingCategory::setFilterRules("omp.qaengine.*.debug=true");
+    QLoggingCategory::setFilterRules("autoqa.qaengine.*.debug=true");
 
     connect(m_socketServer, &ITransportServer::commandReceived, this, &QAEngine::processCommand);
     connect(m_socketServer, &ITransportServer::clientLost, this, &QAEngine::clientLost);

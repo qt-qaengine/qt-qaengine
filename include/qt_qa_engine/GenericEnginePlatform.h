@@ -119,7 +119,7 @@ private slots:
     virtual void activateAppCommand(ITransportClient* socket, const QString& appName) override;
     virtual void closeAppCommand(ITransportClient* socket, const QString& appName) override;
     virtual void queryAppStateCommand(ITransportClient* socket, const QString& appName) override;
-    virtual void backgroundCommand(ITransportClient* socket, double seconds) override;
+    virtual void backgroundCommand(ITransportClient* socket, qlonglong seconds) override;
     virtual void getClipboardCommand(ITransportClient* socket) override;
     virtual void setClipboardCommand(ITransportClient* socket, const QString& content) override;
     virtual void findElementCommand(ITransportClient* socket,
@@ -178,10 +178,10 @@ private slots:
     virtual void hideKeyboardCommand(ITransportClient* socket,
                                      const QString& strategy,
                                      const QString& key,
-                                     double keyCode,
+                                     qlonglong keyCode,
                                      const QString& keyName) override;
     virtual void getCurrentActivityCommand(ITransportClient* socket) override;
-    virtual void implicitWaitCommand(ITransportClient* socket, double msecs) override;
+    virtual void implicitWaitCommand(ITransportClient* socket, qlonglong msecs) override;
     virtual void activeCommand(ITransportClient* socket) override;
     virtual void getAlertTextCommand(ITransportClient* socket) override;
     virtual void isKeyboardShownCommand(ITransportClient* socket) override;
@@ -252,5 +252,5 @@ private slots:
                                                   const QString& elementId,
                                                   const QString& propertyName,
                                                   const QVariant& value,
-                                                  double timeout = 3000);
+                                                  qlonglong timeout = 3000);
 };

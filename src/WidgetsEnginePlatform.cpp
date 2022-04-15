@@ -362,7 +362,7 @@ void WidgetsEnginePlatform::executeCommand_app_activateInComboBox(ITransportClie
 
 void WidgetsEnginePlatform::executeCommand_app_activateInComboBox(ITransportClient* socket,
                                                                   const QString& elementId,
-                                                                  double idx)
+                                                                  qlonglong idx)
 {
     const int index = idx;
 
@@ -463,7 +463,7 @@ void WidgetsEnginePlatform::executeCommand_app_posInTabBar(ITransportClient* soc
 
 void WidgetsEnginePlatform::executeCommand_app_posInTabBar(ITransportClient* socket,
                                                            const QString& elementId,
-                                                           double idx)
+                                                           qlonglong idx)
 {
     const int index = idx;
 
@@ -533,7 +533,7 @@ void WidgetsEnginePlatform::executeCommand_app_activateInTabBar(ITransportClient
 
 void WidgetsEnginePlatform::executeCommand_app_activateInTabBar(ITransportClient* socket,
                                                                 const QString& elementId,
-                                                                double idx)
+                                                                qlonglong idx)
 {
     const int index = idx;
 

@@ -911,7 +911,7 @@ void GenericEnginePlatform::queryAppStateCommand(ITransportClient* socket, const
                             : QStringLiteral("RUNNING_IN_BACKGROUND"));
 }
 
-void GenericEnginePlatform::backgroundCommand(ITransportClient* socket, double seconds)
+void GenericEnginePlatform::backgroundCommand(ITransportClient* socket, qlonglong seconds)
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << seconds;
 
@@ -1293,7 +1293,7 @@ void GenericEnginePlatform::setOrientationCommand(ITransportClient* socket,
 void GenericEnginePlatform::hideKeyboardCommand(ITransportClient* socket,
                                                 const QString& strategy,
                                                 const QString& key,
-                                                double keyCode,
+                                                qlonglong keyCode,
                                                 const QString& keyName)
 {
     qCDebug(categoryGenericEnginePlatform)
@@ -1307,7 +1307,7 @@ void GenericEnginePlatform::getCurrentActivityCommand(ITransportClient* socket)
     socketReply(socket, QStringLiteral("not_implemented"), 405);
 }
 
-void GenericEnginePlatform::implicitWaitCommand(ITransportClient* socket, double msecs)
+void GenericEnginePlatform::implicitWaitCommand(ITransportClient* socket, qlonglong msecs)
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << msecs;
     socketReply(socket, QStringLiteral("not_implemented"), 405);
@@ -1570,7 +1570,7 @@ void GenericEnginePlatform::executeCommand_app_waitForPropertyChange(ITransportC
                                                                      const QString& elementId,
                                                                      const QString& propertyName,
                                                                      const QVariant& value,
-                                                                     double timeout)
+                                                                     qlonglong timeout)
 {
     qCDebug(categoryGenericEnginePlatform)
         << Q_FUNC_INFO << socket << elementId << propertyName << value << timeout;

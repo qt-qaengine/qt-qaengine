@@ -433,8 +433,8 @@ void QuickEnginePlatform::onKeyEvent(QKeyEvent* event)
 }
 
 void QuickEnginePlatform::executeCommand_touch_pressAndHold(ITransportClient* socket,
-                                                            double posx,
-                                                            double posy)
+                                                            qlonglong posx,
+                                                            qlonglong posy)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << socket << posx << posy;
 
@@ -442,8 +442,7 @@ void QuickEnginePlatform::executeCommand_touch_pressAndHold(ITransportClient* so
     socketReply(socket, QString());
 }
 
-void QuickEnginePlatform::executeCommand_touch_mouseSwipe(
-    ITransportClient* socket, double posx, double posy, double stopx, double stopy)
+void QuickEnginePlatform::executeCommand_touch_mouseSwipe(ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << socket << posx << posy << stopx << stopy;
 
@@ -451,8 +450,7 @@ void QuickEnginePlatform::executeCommand_touch_mouseSwipe(
     socketReply(socket, QString());
 }
 
-void QuickEnginePlatform::executeCommand_touch_mouseDrag(
-    ITransportClient* socket, double posx, double posy, double stopx, double stopy)
+void QuickEnginePlatform::executeCommand_touch_mouseDrag(ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << socket << posx << posy << stopx << stopy;
 

@@ -301,7 +301,6 @@ bool QuickEnginePlatform::eventFilter(QObject* watched, QEvent* event)
         case QEvent::MouseButtonDblClick:
         {
             QMouseEvent* me = static_cast<QMouseEvent*>(event);
-            qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << me->pos() << me->globalPos();
             QMetaObject::invokeMethod(m_touchIndicator,
                                       "show",
                                       Qt::QueuedConnection,
@@ -442,7 +441,8 @@ void QuickEnginePlatform::executeCommand_touch_pressAndHold(ITransportClient* so
     socketReply(socket, QString());
 }
 
-void QuickEnginePlatform::executeCommand_touch_mouseSwipe(ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
+void QuickEnginePlatform::executeCommand_touch_mouseSwipe(
+    ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << socket << posx << posy << stopx << stopy;
 
@@ -450,7 +450,8 @@ void QuickEnginePlatform::executeCommand_touch_mouseSwipe(ITransportClient* sock
     socketReply(socket, QString());
 }
 
-void QuickEnginePlatform::executeCommand_touch_mouseDrag(ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
+void QuickEnginePlatform::executeCommand_touch_mouseDrag(
+    ITransportClient* socket, qlonglong posx, qlonglong posy, qlonglong stopx, qlonglong stopy)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << socket << posx << posy << stopx << stopy;
 

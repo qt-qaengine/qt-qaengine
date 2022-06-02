@@ -51,9 +51,6 @@ protected:
     QQuickItem* m_touchIndicator = nullptr;
 
 private slots:
-    // IEnginePlatform interface
-    virtual void getPageSourceCommand(ITransportClient* socket) override;
-
     // synthesized input events
     virtual void onKeyEvent(QKeyEvent* event) override;
 

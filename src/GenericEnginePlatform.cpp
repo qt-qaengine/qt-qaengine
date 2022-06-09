@@ -853,6 +853,10 @@ void GenericEnginePlatform::onPropertyChanged()
 
 void GenericEnginePlatform::onTouchEvent(const QTouchEvent& event)
 {
+    m_rootWindow->raise();
+    m_rootWindow->requestActivate();
+    m_rootWindow->setWindowState(Qt::WindowState::WindowActive);
+
     QWindowSystemInterface::handleTouchEvent(
         m_rootWindow,
         event.timestamp(),
@@ -1565,8 +1569,7 @@ void GenericEnginePlatform::performActionsCommand(ITransportClient* socket,
 
     if (!pointerArgs.isEmpty())
     {
-        qCWarning(categoryGenericEnginePlatform)
-            << Q_FUNC_INFO << "Chain actions for pointer are not implemented!";
+        m_mouseEngine->performChainActions(pointerArgs);
     }
 
     if (!keyArgs.isEmpty())

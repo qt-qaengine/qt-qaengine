@@ -10,6 +10,7 @@
 #include <QBuffer>
 #include <QComboBox>
 #include <QDebug>
+#include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QMenu>
@@ -39,8 +40,13 @@ static bool s_registerPlatform = []()
 {
     if (!s_eventHandler)
     {
-        s_eventHandler = new EventHandler(qApp);
-        qApp->installEventFilter(s_eventHandler);
+        QTimer::singleShot(0,
+                           qApp,
+                           []()
+                           {
+                               s_eventHandler = new EventHandler(qApp);
+                               qApp->installEventFilter(s_eventHandler);
+                           });
     }
     return true;
 }();
@@ -85,6 +91,14 @@ void WidgetsEnginePlatform::initialize()
 {
     if (!m_rootWindow)
     {
+        return;
+    }
+
+    if (!m_rootWindow->isActive())
+    {
+        m_rootWindow->raise();
+        m_rootWindow->requestActivate();
+        QTimer::singleShot(0, this, &WidgetsEnginePlatform::initialize);
         return;
     }
 

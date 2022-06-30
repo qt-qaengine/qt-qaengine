@@ -113,6 +113,9 @@ void QAEngine::initializeSocket()
 
 void QAEngine::initializeEngine()
 {
+    disconnect(
+        m_socketServer, &ITransportServer::commandReceived, this, &QAEngine::initializeEngine);
+
     if (s_engineLoaded)
     {
         return;
@@ -223,7 +226,7 @@ QAEngine* QAEngine::instance()
 {
     if (!s_instance)
     {
-        s_instance = new QAEngine;
+        s_instance = new QAEngine(qApp);
     }
     return s_instance;
 }
@@ -359,11 +362,6 @@ void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
     if (!object.contains(QStringLiteral("action")))
     {
         return;
-    }
-
-    if (!s_engineLoaded)
-    {
-        initializeEngine();
     }
 
     const QString action = object.value(QStringLiteral("action")).toVariant().toString();

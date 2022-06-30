@@ -259,4 +259,5 @@ private slots:
                                                   const QString& propertyName,
                                                   const QVariant& value,
                                                   qlonglong timeout = 3000);
+    void executeCommand_app_setLoggingFilter(ITransportClient* socket, const QString& rules);
 };

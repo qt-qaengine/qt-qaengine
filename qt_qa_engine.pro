@@ -1,9 +1,8 @@
 TARGET = qaengine
+TEMPLATE = lib
 
 TARGETPATH = AutoQA/QAEngine
 android {
-    TEMPLATE = lib
-    CONFIG += plugin
     TARGET = $$qtLibraryTarget($$TARGET)
     installPath = $$[QT_INSTALL_QML]/$$TARGETPATH
     target.path = $$installPath
@@ -34,7 +33,8 @@ SOURCES += \
     src/QAPendingEvent.cpp \
     src/QuickEnginePlatform.cpp \
     src/TCPSocketClient.cpp \
-    src/TCPSocketServer.cpp
+    src/TCPSocketServer.cpp \
+    src/loader.cpp
 
 HEADERS += \
     include/qt_qa_engine/GenericEnginePlatform.h \

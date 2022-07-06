@@ -1,8 +1,13 @@
+#include <qt_qa_engine/IEnginePlatform.h>
 #include <qt_qa_engine/ITransportClient.h>
 #include <qt_qa_engine/QAEngine.h>
 #include <qt_qa_engine/QAEngineSocketClient.h>
-#include <qt_qa_engine/QuickEnginePlatform.h>
 #include <qt_qa_engine/TCPSocketServer.h>
+
+#if defined(MO_USE_QUICK)
+#include <QQuickWindow>
+#include <qt_qa_engine/QuickEnginePlatform.h>
+#endif
 
 #if defined(MO_USE_QWIDGETS)
 #include <QApplication>
@@ -16,8 +21,8 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QMetaMethod>
-#include <QQuickWindow>
 #include <QTcpSocket>
 #include <QTimer>
 #include <QWindow>
@@ -171,17 +176,23 @@ void QAEngine::onFocusWindowChanged(QWindow* window)
     if (!s_windows.contains(window))
     {
         IEnginePlatform* platform = nullptr;
+#if defined(MO_USE_QUICK)
         if (qobject_cast<QQuickWindow*>(window))
         {
             platform = new QuickEnginePlatform(window);
         }
-        else
-        {
-#if defined(MO_USE_QWIDGETS)
-            platform = new WidgetsEnginePlatform(window);
-#else
-            return;
 #endif
+
+#if defined(MO_USE_QWIDGETS)
+        if (!platform)
+        {
+            platform = new WidgetsEnginePlatform(window);
+        }
+#endif
+        if (!platform)
+        {
+            qWarning() << Q_FUNC_INFO << "Can't determine platform";
+            return;
         }
         connect(platform, &IEnginePlatform::ready, this, &QAEngine::onPlatformReady);
         connect(window,
@@ -350,6 +361,7 @@ void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
     }
 
     QJsonObject object = json.object();
+
     if (!object.contains(QStringLiteral("cmd")))
     {
         return;

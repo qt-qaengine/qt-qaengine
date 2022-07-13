@@ -13,6 +13,7 @@
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMetaMethod>
@@ -34,6 +35,7 @@ namespace
 {
 
 QList<QAction*> s_actions;
+QHash<QAction*, QWidget*> s_actionHash;
 EventHandler* s_eventHandler = nullptr;
 
 static bool s_registerPlatform = []()
@@ -61,18 +63,15 @@ QList<QObject*> WidgetsEnginePlatform::childrenList(QObject* parentItem)
     {
         for (QAction *action : widget->actions())
         {
-            result.append(action);
-        }
-    }
-    QAction *action = qobject_cast<QAction*>(parentItem);
-    if (action)
-    {
-        if (action->menu())
-        {
-            for (QAction *a : action->menu()->actions())
+            if (!s_actionHash.contains(action))
             {
-                result.append(a);
+                s_actionHash.insert(action, widget);
             }
+            if (action->menu() && action->menu() != widget)
+            {
+                result.append(action->menu());
+            }
+            result.append(action);
         }
     }
     for (QWidget* w : parentItem->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly))
@@ -137,6 +136,9 @@ void WidgetsEnginePlatform::initialize()
     {
         m_rootWidget = qApp->activeWindow();
     }
+
+    m_mainWindow = qobject_cast<QMainWindow*>(m_rootWidget);
+
     m_rootObject = m_rootWidget;
     qCDebug(categoryWidgetsEnginePlatform) << Q_FUNC_INFO << m_rootObject;
 
@@ -633,16 +635,50 @@ QStringList WidgetsEnginePlatform::recursiveDumpModel(QAbstractItemModel* model,
     return results;
 }
 
+QRect WidgetsEnginePlatform::getActionGeometry(QAction *action)
+{
+    if (s_actionHash.contains(action))
+    {
+        QWidget *w = s_actionHash.value(action);
+        QMenu *m = qobject_cast<QMenu*>(w);
+        if (m)
+        {
+            QRect geometry = m->actionGeometry(action);
+            geometry.translate(m_rootWidget->mapFromGlobal(m->pos()));
+            return geometry;
+        }
+    }
+    if (m_mainWindow && m_mainWindow->menuBar() && m_mainWindow->menuBar()->actions().contains(action))
+    {
+        QRect geometry = m_mainWindow->menuBar()->actionGeometry(action);
+        geometry.translate(m_mainWindow->menuBar()->pos());
+        return geometry;
+    }
+    return {};
+}
+
 QPoint WidgetsEnginePlatform::getAbsPosition(QObject* item)
 {
-    qCDebug(categoryWidgetsEnginePlatform) << Q_FUNC_INFO << item << m_rootWidget;
+    QAction* a = qobject_cast<QAction*>(item);
+    if (a)
+    {
+        auto actionGeometry = getActionGeometry(a);
+        if (!actionGeometry.isEmpty())
+        {
+            return actionGeometry.topLeft();
+        }
+    }
+    QMenu *m = qobject_cast<QMenu*>(item);
+    if (m)
+    {
+        return m_rootWidget->mapFromGlobal(m->pos());
+    }
 
     QWidget* w = qobject_cast<QWidget*>(item);
     if (!w)
     {
         return QPoint();
     }
-    qCDebug(categoryWidgetsEnginePlatform) << Q_FUNC_INFO << item << w;
 
     if (w == m_rootWidget)
     {
@@ -668,8 +704,15 @@ QPoint WidgetsEnginePlatform::getPosition(QObject* item)
 
 QSize WidgetsEnginePlatform::getSize(QObject* item)
 {
-    qCDebug(categoryWidgetsEnginePlatform) << Q_FUNC_INFO << item;
-
+    QAction* a = qobject_cast<QAction*>(item);
+    if (a)
+    {
+        auto actionGeometry = getActionGeometry(a);
+        if (!actionGeometry.isEmpty())
+        {
+            return actionGeometry.size();
+        }
+    }
     QWidget* w = qobject_cast<QWidget*>(item);
     if (!w)
     {
@@ -716,7 +759,21 @@ void WidgetsEnginePlatform::grabScreenshot(ITransportClient* socket,
 
     QByteArray arr;
     QBuffer buffer(&arr);
-    QPixmap pix = w->grab();
+    QPixmap pix;
+
+    if (w == m_rootWidget)
+    {
+        pix = w->screen()->grabWindow(0,
+                                      m_rootWindow->x(),
+                                      m_rootWindow->y(),
+                                      m_rootWindow->width(),
+                                      m_rootWindow->height());
+    }
+    else
+    {
+        pix = w->grab();
+    }
+
     if (fillBackground)
     {
         QPixmap pixmap(pix.width(), pix.height());

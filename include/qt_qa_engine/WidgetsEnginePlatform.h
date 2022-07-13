@@ -3,6 +3,7 @@
 #include <qt_qa_engine/GenericEnginePlatform.h>
 
 #include <QJsonObject>
+#include <QMainWindow>
 #include <QModelIndex>
 
 class QAbstractItemModel;
@@ -38,6 +39,7 @@ protected:
 
     QHash<QObject*, QWidget*> m_rootWidgets;
     QWidget* m_rootWidget = nullptr;
+    QMainWindow *m_mainWindow = nullptr;
 
 private slots:
     // execute_%1 methods
@@ -80,6 +82,7 @@ private:
                                    const QString& display,
                                    bool partial = false);
     QStringList recursiveDumpModel(QAbstractItemModel* model, QModelIndex index);
+    QRect getActionGeometry(QAction *action);
 };
 
 class EventHandler : public QObject

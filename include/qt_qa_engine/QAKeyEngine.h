@@ -18,7 +18,7 @@ public:
     void performChainActions(const QVariantList &actions);
 
 signals:
-    void triggered(QKeyEvent *event);
+    void triggered(const QKeyEvent &event);
 
 public slots:
 

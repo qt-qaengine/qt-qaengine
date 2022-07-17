@@ -421,12 +421,6 @@ QQmlEngine* QuickEnginePlatform::getEngine(QQuickItem* item)
     return engine;
 }
 
-void QuickEnginePlatform::onKeyEvent(QKeyEvent* event)
-{
-    QQuickWindowPrivate* wp = QQuickWindowPrivate::get(m_rootQuickWindow);
-    wp->deliverKeyEvent(event);
-}
-
 void QuickEnginePlatform::executeCommand_touch_pressAndHold(ITransportClient* socket,
                                                             qlonglong posx,
                                                             qlonglong posy)
@@ -454,7 +448,6 @@ void QuickEnginePlatform::executeCommand_touch_mouseDrag(
     mouseDrag(posx, posy, stopx, stopy);
     socketReply(socket, QString());
 }
-
 
 void QuickEnginePlatform::executeCommand_app_js(ITransportClient* socket,
                                                 const QString& elementId,

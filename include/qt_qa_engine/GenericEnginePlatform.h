@@ -2,7 +2,7 @@
 
 #include <qt_qa_engine/IEnginePlatform.h>
 
-class QAMouseEngine;
+class QAKeyMouseEngine;
 class QTouchEvent;
 class QMouseEvent;
 class QKeyEvent;
@@ -34,7 +34,7 @@ public:
     QRect getAbsGeometry(QObject* item) override;
 
 protected:
-    friend class QAMouseEngine;
+    friend class QAKeyMouseEngine;
 
     void findElement(ITransportClient* socket,
                      const QString& strategy,
@@ -91,7 +91,7 @@ protected:
     QObject* m_rootObject = nullptr;
 
     QHash<QString, QObject*> m_items;
-    QAMouseEngine* m_mouseEngine = nullptr;
+    QAKeyMouseEngine* m_mouseEngine = nullptr;
 
     QHash<QString, QStringList> m_blacklistedProperties;
 

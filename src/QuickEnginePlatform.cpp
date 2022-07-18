@@ -1,7 +1,7 @@
 #include <qt_qa_engine/ITransportClient.h>
 #include <qt_qa_engine/QAEngine.h>
 #include <qt_qa_engine/QAKeyEngine.h>
-#include <qt_qa_engine/QAMouseEngine.h>
+#include <qt_qa_engine/QAKeyMouseEngine.h>
 #include <qt_qa_engine/QuickEnginePlatform.h>
 
 #include <QBuffer>
@@ -61,7 +61,7 @@ QuickEnginePlatform::QuickEnginePlatform(QWindow* window)
     Q_INIT_RESOURCE(qtqaengine);
 
 #if defined(Q_OS_ANDROID) || defined(MO_OS_IOS)
-    m_mouseEngine->setMode(QAMouseEngine::TouchEventMode);
+    m_keyMouseEngine->setMode(QAKeyMouseEngine::TouchEventMode);
 #endif
 }
 

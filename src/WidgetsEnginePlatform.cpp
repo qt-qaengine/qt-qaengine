@@ -1,6 +1,5 @@
 #include <qt_qa_engine/ITransportClient.h>
 #include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAKeyEngine.h>
 #include <qt_qa_engine/QAKeyMouseEngine.h>
 #include <qt_qa_engine/WidgetsEnginePlatform.h>
 
@@ -58,10 +57,10 @@ static bool s_registerPlatform = []()
 QList<QObject*> WidgetsEnginePlatform::childrenList(QObject* parentItem)
 {
     QList<QObject*> result;
-    QWidget *widget = qobject_cast<QWidget*>(parentItem);
+    QWidget* widget = qobject_cast<QWidget*>(parentItem);
     if (widget)
     {
-        for (QAction *action : widget->actions())
+        for (QAction* action : widget->actions())
         {
             if (!s_actionHash.contains(action))
             {
@@ -635,12 +634,12 @@ QStringList WidgetsEnginePlatform::recursiveDumpModel(QAbstractItemModel* model,
     return results;
 }
 
-QRect WidgetsEnginePlatform::getActionGeometry(QAction *action)
+QRect WidgetsEnginePlatform::getActionGeometry(QAction* action)
 {
     if (s_actionHash.contains(action))
     {
-        QWidget *w = s_actionHash.value(action);
-        QMenu *m = qobject_cast<QMenu*>(w);
+        QWidget* w = s_actionHash.value(action);
+        QMenu* m = qobject_cast<QMenu*>(w);
         if (m)
         {
             QRect geometry = m->actionGeometry(action);
@@ -648,7 +647,8 @@ QRect WidgetsEnginePlatform::getActionGeometry(QAction *action)
             return geometry;
         }
     }
-    if (m_mainWindow && m_mainWindow->menuBar() && m_mainWindow->menuBar()->actions().contains(action))
+    if (m_mainWindow && m_mainWindow->menuBar() &&
+        m_mainWindow->menuBar()->actions().contains(action))
     {
         QRect geometry = m_mainWindow->menuBar()->actionGeometry(action);
         geometry.translate(m_mainWindow->menuBar()->pos());
@@ -668,7 +668,7 @@ QPoint WidgetsEnginePlatform::getAbsPosition(QObject* item)
             return actionGeometry.topLeft();
         }
     }
-    QMenu *m = qobject_cast<QMenu*>(item);
+    QMenu* m = qobject_cast<QMenu*>(item);
     if (m)
     {
         return m_rootWidget->mapFromGlobal(m->pos());
@@ -763,11 +763,8 @@ void WidgetsEnginePlatform::grabScreenshot(ITransportClient* socket,
 
     if (w == m_rootWidget)
     {
-        pix = w->screen()->grabWindow(0,
-                                      m_rootWindow->x(),
-                                      m_rootWindow->y(),
-                                      m_rootWindow->width(),
-                                      m_rootWindow->height());
+        pix = w->screen()->grabWindow(
+            0, m_rootWindow->x(), m_rootWindow->y(), m_rootWindow->width(), m_rootWindow->height());
     }
     else
     {

@@ -406,7 +406,7 @@ QRect GenericEnginePlatform::getAbsGeometry(QObject* item)
 
 QPoint GenericEnginePlatform::getClickPosition(QObject *item)
 {
-    return getAbsPosition(item);
+    return getAbsGeometry(item).center();
 }
 
 void GenericEnginePlatform::activateWindow()
@@ -601,11 +601,10 @@ bool GenericEnginePlatform::recursiveDumpXml(QXmlStreamWriter* writer, QObject* 
 
 void GenericEnginePlatform::clickItem(QObject* item)
 {
-    const QPoint itemAbs = getAbsPosition(item);
-    const QSize size = getSize(item);
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item << itemAbs << size;
+    const QRect itemAbs = getAbsGeometry(item);
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item << itemAbs;
 
-    clickPoint(itemAbs.x() + size.width() / 2, itemAbs.y() + size.height() / 2);
+    clickPoint(itemAbs.center().x(), itemAbs.center().y());
 }
 
 QString GenericEnginePlatform::getClassName(QObject* item)

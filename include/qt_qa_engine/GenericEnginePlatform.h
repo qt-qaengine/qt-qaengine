@@ -34,6 +34,8 @@ public:
     QRect getAbsGeometry(QObject* item) override;
     QPoint getClickPosition(QObject *item) override;
 
+    void activateWindow() override;
+
 protected:
     friend class QAKeyMouseEngine;
 

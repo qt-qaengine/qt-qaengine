@@ -27,6 +27,8 @@
 #include <QLoggingCategory>
 
 Q_LOGGING_CATEGORY(categoryGenericEnginePlatform, "autoqa.qaengine.platform.generic", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryGenericEnginePlatformFind, "autoqa.qaengine.platform.generic.find", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryGenericEnginePlatformRaw, "autoqa.qaengine.platform.generic.raw", QtWarningMsg)
 
 GenericEnginePlatform::GenericEnginePlatform(QWindow* window)
     : IEnginePlatform(window)
@@ -52,14 +54,16 @@ QObject* GenericEnginePlatform::rootObject()
 
 void GenericEnginePlatform::socketReply(ITransportClient* socket, const QVariant& value, int status)
 {
+    QByteArray data;
+    {
     QJsonObject reply;
     reply.insert(QStringLiteral("status"), status);
     reply.insert(QStringLiteral("value"), QJsonValue::fromVariant(value));
 
-    const QByteArray data = QJsonDocument(reply).toJson(QJsonDocument::Compact);
-
+    data = QJsonDocument(reply).toJson(QJsonDocument::Compact);
+    }
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << data.size() << "Reply is:";
-    qCDebug(categoryGenericEnginePlatform).noquote() << data;
+//    qCDebug(categoryGenericEnginePlatformRaw).noquote() << data;
 
     socket->write(data);
     socket->flush();
@@ -154,11 +158,11 @@ void GenericEnginePlatform::findByProperty(ITransportClient* socket,
 
 QObject* GenericEnginePlatform::findItemById(const QString& id, QObject* parentItem)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << id << parentItem;
+    qCDebug(categoryGenericEnginePlatformFind) << Q_FUNC_INFO << id << parentItem;
 
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     if (checkMatch(id, uniqueId(parentItem)))
@@ -180,12 +184,12 @@ QObject* GenericEnginePlatform::findItemById(const QString& id, QObject* parentI
 QObjectList GenericEnginePlatform::findItemsByObjectName(const QString& objectName,
                                                          QObject* parentItem)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << objectName << parentItem;
+    qCDebug(categoryGenericEnginePlatformFind) << Q_FUNC_INFO << objectName << parentItem;
     QObjectList items;
 
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     if (checkMatch(objectName, parentItem->objectName()))
@@ -204,13 +208,13 @@ QObjectList GenericEnginePlatform::findItemsByObjectName(const QString& objectNa
 QObjectList GenericEnginePlatform::findItemsByClassName(const QString& className,
                                                         QObject* parentItem)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << className << parentItem;
+    qCDebug(categoryGenericEnginePlatformFind) << Q_FUNC_INFO << className << parentItem;
 
     QObjectList items;
 
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     if (checkMatch(className, getClassName(parentItem)))
@@ -230,14 +234,14 @@ QObjectList GenericEnginePlatform::findItemsByProperty(const QString& propertyNa
                                                        const QVariant& propertyValue,
                                                        QObject* parentItem)
 {
-    qCDebug(categoryGenericEnginePlatform)
+    qCDebug(categoryGenericEnginePlatformFind)
         << Q_FUNC_INFO << propertyName << propertyValue << parentItem;
 
     QObjectList items;
 
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     if (parentItem->property(propertyName.toLatin1().constData()) == propertyValue)
@@ -257,13 +261,13 @@ QObjectList GenericEnginePlatform::findItemsByText(const QString& text,
                                                    bool partial,
                                                    QObject* parentItem)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << text << partial << parentItem;
+    qCDebug(categoryGenericEnginePlatformFind) << Q_FUNC_INFO << text << partial << parentItem;
 
     QObjectList items;
 
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     const QString& itemText = getText(parentItem);
@@ -288,7 +292,7 @@ QObjectList GenericEnginePlatform::findItemsByXpath(const QString& xpath, QObjec
 #if defined(MO_USE_QXMLPATTERNS)
     if (!parentItem)
     {
-        parentItem = m_rootObject;
+        parentItem = rootObject();
     }
 
     QString out;
@@ -364,8 +368,6 @@ QObject* GenericEnginePlatform::getObject(const QString& elementId)
 
 QString GenericEnginePlatform::getText(QObject* item)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item;
-
     static const char* textProperties[] = {
         "label",
         "title",
@@ -394,21 +396,24 @@ QString GenericEnginePlatform::getText(QObject* item)
 
 QRect GenericEnginePlatform::getGeometry(QObject* item)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item;
-
     return QRect(getPosition(item), getSize(item));
 }
 
 QRect GenericEnginePlatform::getAbsGeometry(QObject* item)
 {
-    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item;
-
     return QRect(getAbsPosition(item), getSize(item));
 }
 
 QPoint GenericEnginePlatform::getClickPosition(QObject *item)
 {
     return getAbsPosition(item);
+}
+
+void GenericEnginePlatform::activateWindow()
+{
+    m_rootWindow->raise();
+    m_rootWindow->requestActivate();
+    m_rootWindow->setWindowState(Qt::WindowState::WindowActive);
 }
 
 QJsonObject GenericEnginePlatform::dumpObject(QObject* item, int depth)
@@ -596,7 +601,7 @@ bool GenericEnginePlatform::recursiveDumpXml(QXmlStreamWriter* writer, QObject* 
 
 void GenericEnginePlatform::clickItem(QObject* item)
 {
-    const QPoint itemAbs = getClickPosition(item);
+    const QPoint itemAbs = getAbsPosition(item);
     const QSize size = getSize(item);
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item << itemAbs << size;
 
@@ -878,16 +883,6 @@ void GenericEnginePlatform::onPropertyChanged()
 
 void GenericEnginePlatform::onTouchEvent(const QTouchEvent& event)
 {
-#if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    m_rootWindow->raise();
-    m_rootWindow->requestActivate();
-    m_rootWindow->setWindowState(Qt::WindowState::WindowActive);
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
-#endif
-
     QWindowSystemInterface::handleTouchEvent(
         m_rootWindow,
         event.timestamp(),
@@ -898,20 +893,12 @@ void GenericEnginePlatform::onTouchEvent(const QTouchEvent& event)
 
 void GenericEnginePlatform::onMouseEvent(const QMouseEvent& event)
 {
-#if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    m_rootWindow->raise();
-    m_rootWindow->requestActivate();
-    m_rootWindow->setWindowState(Qt::WindowState::WindowActive);
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
-#endif
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << event.type() << event.localPos() << event.screenPos() << event.button() << event.buttons() << event.modifiers();
 
     QWindowSystemInterface::handleMouseEvent(m_rootWindow,
                                              event.timestamp(),
                                              event.localPos(),
-                                             event.localPos(),
+                                             event.screenPos(),
                                              event.buttons(),
 #if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
                                              event.button(),
@@ -926,33 +913,25 @@ void GenericEnginePlatform::onKeyEvent(const QKeyEvent& event)
     qCDebug(categoryGenericEnginePlatform)
         << Q_FUNC_INFO << event.type() << event.key() << event.modifiers() << event.text();
 
-    m_rootWindow->raise();
-    m_rootWindow->requestActivate();
-    m_rootWindow->setWindowState(Qt::WindowState::WindowActive);
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
-
-    QWindowSystemInterface::handleKeyEvent(
+   QWindowSystemInterface::handleKeyEvent(
         m_rootWindow, event.type(), event.key(), event.modifiers(), event.text());
 }
 
 void GenericEnginePlatform::appConnectCommand(ITransportClient* socket)
 {
-    qDebug() << Q_FUNC_INFO << socket;
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket;
     socketReply(socket, QString());
 }
 
 void GenericEnginePlatform::appDisconnectCommand(ITransportClient* socket)
 {
-    qDebug() << Q_FUNC_INFO << socket;
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket;
     socketReply(socket, QString());
 }
 
 void GenericEnginePlatform::initializeCommand(ITransportClient* socket)
 {
-    qDebug() << Q_FUNC_INFO << socket;
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket;
 }
 
 void GenericEnginePlatform::activateAppCommand(ITransportClient* socket, const QString& appName)
@@ -1400,7 +1379,7 @@ void GenericEnginePlatform::getPageSourceCommand(ITransportClient* socket)
     QXmlStreamWriter writer(&out);
     writer.setAutoFormatting(false);
     writer.writeStartDocument();
-    recursiveDumpXml(&writer, m_rootObject, 0);
+    recursiveDumpXml(&writer, rootObject(), 0);
     writer.writeEndDocument();
 
     socketReply(socket, out);
@@ -1591,8 +1570,12 @@ void GenericEnginePlatform::performActionsCommand(ITransportClient* socket,
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket;
 
-    const auto paramsArgList = paramsArg.toList();
-    m_keyMouseEngine->performChainActions(paramsArgList);
+    QEventLoop loop;
+    connect(m_keyMouseEngine->performChainActions(paramsArg.toList()),
+            &QAPendingEvent::completed,
+            &loop,
+            &QEventLoop::quit);
+    loop.exec();
 
     socketReply(socket, QString());
 }
@@ -1841,7 +1824,8 @@ void GenericEnginePlatform::executeCommand_app_dumpTree(ITransportClient* socket
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket;
 
-    QJsonObject reply = recursiveDumpTree(m_rootObject);
+
+    QJsonObject reply = recursiveDumpTree(rootObject());
     socketReply(socket,
                 qCompress(QJsonDocument(reply).toJson(QJsonDocument::Compact), 9).toBase64());
 }

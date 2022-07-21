@@ -21,6 +21,7 @@ public:
     QSize getSize(QObject* item) override;
     bool isItemEnabled(QObject* item) override;
     bool isItemVisible(QObject* item) override;
+    QPointF mapToGlobal(const QPointF &point) override;
 
 public slots:
     virtual void initialize() override;

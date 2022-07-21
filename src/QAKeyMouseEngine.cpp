@@ -15,6 +15,7 @@
 
 #include <QDebug>
 #include <QThread>
+#include <QWheelEvent>
 
 #include <QLoggingCategory>
 
@@ -405,6 +406,7 @@ QAPendingEvent* QAKeyMouseEngine::performChainActions(const QVariantList& action
     connect(worker, &EventWorker::mousePressed, this, &QAKeyMouseEngine::onMousePressed);
     connect(worker, &EventWorker::mouseReleased, this, &QAKeyMouseEngine::onMouseReleased);
     connect(worker, &EventWorker::mouseMoved, this, &QAKeyMouseEngine::onMouseMoved);
+    connect(worker, &EventWorker::mouseWheeled, this, &QAKeyMouseEngine::onMouseWheeled);
     connect(worker,
             &EventWorker::finished,
             this,
@@ -589,7 +591,7 @@ void QAKeyMouseEngine::onKeyReleased(const QString &value)
     handleKey(value, true);
 }
 
-void QAKeyMouseEngine::onMousePressed(const QPointF point, int button)
+void QAKeyMouseEngine::onMousePressed(const QPointF &point, int button)
 {
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << point;
     if (m_mode == TouchEventMode)
@@ -642,7 +644,7 @@ void QAKeyMouseEngine::onMousePressed(const QPointF point, int button)
     }
 }
 
-void QAKeyMouseEngine::onMouseReleased(const QPointF point, int button)
+void QAKeyMouseEngine::onMouseReleased(const QPointF &point, int button)
 {
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << point;
     if (m_mode == TouchEventMode)
@@ -693,7 +695,7 @@ void QAKeyMouseEngine::onMouseReleased(const QPointF point, int button)
     }
 }
 
-void QAKeyMouseEngine::onMouseMoved(const QPointF point)
+void QAKeyMouseEngine::onMouseMoved(const QPointF &point)
 {
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << point;
     if (m_mode == TouchEventMode)
@@ -731,6 +733,22 @@ void QAKeyMouseEngine::onMouseMoved(const QPointF point)
         QMouseEvent me(QEvent::MouseMove, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), Qt::NoButton, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
+    }
+}
+
+void QAKeyMouseEngine::onMouseWheeled(const QPointF &delta, const QPointF &point)
+{
+    qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << delta;
+    if (m_mode == TouchEventMode)
+    {
+
+    }
+    else
+    {
+        QPoint globalPos = QAEngine::instance()->getPlatform()->mapToGlobal(point).toPoint();
+        QWheelEvent we(point, globalPos, QPoint(), delta.toPoint(), m_buttons, m_mods, Qt::NoScrollPhase, false);
+        we.setTimestamp(m_eta->elapsed());
+        emit wheelEvent(we);
     }
 }
 
@@ -943,6 +961,7 @@ void EventWorker::startChain()
 {
     QVariantList pointerArgs;
     QVariantList keyArgs;
+    QVariantList wheelArgs;
 
     for (const QVariant& paramsVar : qAsConst(m_actions))
     {
@@ -955,14 +974,31 @@ void EventWorker::startChain()
         {
             keyArgs.append(param);
         }
+        else if (param.value(QStringLiteral("type")).toString() == QLatin1String("wheel"))
+        {
+            wheelArgs.append(param);
+        }
     }
 
-    QVariantList keyActions = keyArgs.first().toMap().value(QStringLiteral("actions")).toList();
-    QVariantList mouseActions =
-        pointerArgs.first().toMap().value(QStringLiteral("actions")).toList();
+    QVariantList keyActions;
+    if (keyArgs.size() > 0)
+    {
+        keyActions = keyArgs.first().toMap().value(QStringLiteral("actions")).toList();
+    }
+    QVariantList mouseActions;
+    if (pointerArgs.size() > 0)
+    {
+        mouseActions = pointerArgs.first().toMap().value(QStringLiteral("actions")).toList();
+    }
+    QVariantList wheelActions;
+    if (wheelArgs.size() > 0)
+    {
+        wheelActions = wheelArgs.first().toMap().value(QStringLiteral("actions")).toList();
+    }
 
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << keyActions;
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << mouseActions;
+    qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << wheelActions;
 
     if (keyActions.size() != mouseActions.size())
     {
@@ -974,10 +1010,13 @@ void EventWorker::startChain()
 
     QPointF previousPoint;
 
-    for (int i = 0; i < keyActions.size(); i++)
+    int count = qMax(keyActions.size(), qMax(mouseActions.size(), wheelActions.size()));
+    qDebug() << Q_FUNC_INFO << count;
+
+    for (int i = 0; i < count; i++)
     {
         // key action
-        {
+        if (keyActions.size() > i) {
             const auto& actionVar = keyActions.at(i);
             const QVariantMap action = actionVar.toMap();
             const QString type = action.value(QStringLiteral("type")).toString();
@@ -1007,7 +1046,7 @@ void EventWorker::startChain()
         }
 
         // mouse action
-        {
+        if (mouseActions.size() > i) {
             const auto& actionVar = mouseActions.at(i);
             const QVariantMap action = actionVar.toMap();
             const QString type = action.value(QStringLiteral("type")).toString();
@@ -1082,6 +1121,29 @@ void EventWorker::startChain()
                 emit mouseReleased(previousPoint, button);
 
                 previousPoint = QPointF();
+            }
+        }
+
+        // wheel action
+        if (wheelActions.size() > i) {
+            const auto& actionVar = wheelActions.at(i);
+            const QVariantMap action = actionVar.toMap();
+            const QString type = action.value(QStringLiteral("type")).toString();
+            const QString origin = action.value(QStringLiteral("origin"), QStringLiteral("viewport")).toString();
+            const int deltaX = action.value(QStringLiteral("deltaX"), 0).toInt();
+            const int deltaY = action.value(QStringLiteral("deltaY"), 0).toInt();
+
+            QObject *item = QAEngine::instance()->getPlatform()->rootObject();
+            QPointF point = previousPoint;
+
+            if (origin == QLatin1String("viewport"))
+            {
+                QPointF point = QAEngine::instance()->getPlatform()->getAbsGeometry(item).center();
+                emit mouseWheeled(QPointF(deltaX, deltaY), point);
+            }
+            else
+            {
+
             }
         }
     }

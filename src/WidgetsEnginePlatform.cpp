@@ -84,7 +84,9 @@ QList<QObject*> WidgetsEnginePlatform::childrenList(QObject* parentItem)
                 {
                     s_menuHash.insert(action->menu(), widget);
                 }
-                result.append(action->menu());
+                if (action->menu()->isActiveWindow()) {
+                    result.append(action->menu());
+                }
             }
             result.append(action);
         }
@@ -131,6 +133,9 @@ QList<QObject*> WidgetsEnginePlatform::childrenList(QObject* parentItem)
                 else
                 {
                     s_menuHash.insert(m, w);
+                }
+                if (!m->isActiveWindow()) {
+                    continue;
                 }
             }
         }

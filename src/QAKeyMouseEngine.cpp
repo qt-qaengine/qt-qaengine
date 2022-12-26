@@ -345,7 +345,7 @@ QAPendingEvent* QAKeyMouseEngine::performMultiAction(const QVariantList& multiAc
                     lock->unlock();
                     if (finishedCount == actionsSize)
                     {
-                        event->setCompleted();
+                        QMetaObject::invokeMethod(event, "setCompleted", Qt::QueuedConnection);
                         event->deleteLater();
                         delete lock;
                     }
@@ -381,7 +381,7 @@ QAPendingEvent* QAKeyMouseEngine::performTouchAction(const QVariantList& actions
             [event]()
             {
                 qDebug() << Q_FUNC_INFO << "event finished";
-                event->setCompleted();
+                QMetaObject::invokeMethod(event, "setCompleted", Qt::QueuedConnection);
                 event->deleteLater();
             });
 
@@ -413,7 +413,7 @@ QAPendingEvent* QAKeyMouseEngine::performChainActions(const QVariantList& action
             [event]()
             {
                 qDebug() << Q_FUNC_INFO << "0 event finished";
-                event->setCompleted();
+                QMetaObject::invokeMethod(event, "setCompleted", Qt::QueuedConnection);
                 event->deleteLater();
                 qDebug() << Q_FUNC_INFO << event << "1 event finished";
             });

@@ -59,9 +59,9 @@ QuickEnginePlatform::QuickEnginePlatform(QWindow* window)
 {
     Q_INIT_RESOURCE(qtqaengine);
 
-#if defined(Q_OS_ANDROID) || defined(MO_OS_IOS)
+//#if defined(Q_OS_ANDROID) || defined(MO_OS_IOS)
     m_keyMouseEngine->setMode(QAKeyMouseEngine::TouchEventMode);
-#endif
+//#endif
 }
 
 QQuickItem* QuickEnginePlatform::findParentFlickable(QQuickItem* rootItem)
@@ -283,18 +283,17 @@ void QuickEnginePlatform::initialize()
 
 bool QuickEnginePlatform::eventFilter(QObject* watched, QEvent* event)
 {
-    QQuickItem* item = qobject_cast<QQuickItem*>(watched);
-    if (!item)
-    {
-        return QObject::eventFilter(watched, event);
-    }
     switch (event->type())
     {
         case QEvent::TouchBegin:
         case QEvent::TouchUpdate:
         {
             QTouchEvent* te = static_cast<QTouchEvent*>(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            if (te->points().isEmpty())
+#else
             if (te->touchPoints().isEmpty())
+#endif
             {
                 break;
             }
@@ -302,8 +301,13 @@ bool QuickEnginePlatform::eventFilter(QObject* watched, QEvent* event)
                 m_touchIndicator,
                 "show",
                 Qt::QueuedConnection,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                Q_ARG(QVariant, te->points().first().scenePosition().toPoint()),
+                Q_ARG(QVariant, te->points().first().ellipseDiameters().toSize()));
+#else
                 Q_ARG(QVariant, te->touchPoints().first().screenPos().toPoint()),
                 Q_ARG(QVariant, te->touchPoints().first().rect().size().toSize()));
+#endif
             break;
         }
         case QEvent::MouseButtonPress:
@@ -311,10 +315,17 @@ bool QuickEnginePlatform::eventFilter(QObject* watched, QEvent* event)
         case QEvent::MouseMove:
         {
             QMouseEvent* me = static_cast<QMouseEvent*>(event);
+            if (me->buttons() == Qt::NoButton) {
+                return QObject::eventFilter(watched, event);
+            }
             QMetaObject::invokeMethod(m_touchIndicator,
                                       "show",
                                       Qt::QueuedConnection,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                                      Q_ARG(QVariant, me->scenePosition()),
+#else
                                       Q_ARG(QVariant, me->windowPos()),
+#endif
                                       Q_ARG(QVariant, QSize(32, 32)));
             break;
         }
@@ -323,6 +334,7 @@ bool QuickEnginePlatform::eventFilter(QObject* watched, QEvent* event)
         case QEvent::MouseButtonRelease:
         {
             QMetaObject::invokeMethod(m_touchIndicator, "hide", Qt::QueuedConnection);
+            break;
         }
         default:
             break;

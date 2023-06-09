@@ -9,7 +9,11 @@
 class QAPendingEvent;
 class QElapsedTimer;
 class QTimer;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+class QPointingDevice;
+#else
 class QTouchDevice;
+#endif
 class QMouseEvent;
 class QKeyEvent;
 class QAKeyMouseEngine : public QObject
@@ -50,7 +54,11 @@ public:
 
     int getNextPointId();
     qint64 getEta();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPointingDevice* getTouchDevice();
+#else
     QTouchDevice* getTouchDevice();
+#endif
 
 signals:
     void touchEvent(const QTouchEvent& event);
@@ -84,7 +92,11 @@ private:
 
     MouseMode m_mode = MouseEventMode;
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPointingDevice* m_touchDevice;
+#else
     QTouchDevice* m_touchDevice;
+#endif
     int m_tpId = 0;
 
     Qt::KeyboardModifiers m_mods = Qt::NoModifier;

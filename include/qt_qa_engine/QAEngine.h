@@ -1,7 +1,7 @@
-#ifndef QAENGINE_HPP
-#define QAENGINE_HPP
+#pragma once
 
 #include <QObject>
+#include <QVariant>
 
 class QAEngineSocketClient;
 class ITransportClient;
@@ -48,4 +48,3 @@ private:
     ITransportServer* m_socketServer = nullptr;
 };
 
-#endif // QAENGINE_HPP

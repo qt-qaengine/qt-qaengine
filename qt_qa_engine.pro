@@ -11,7 +11,11 @@ android {
 
 QT += core core-private network
 CONFIG += plugin
-CONFIG += c++11
+#CONFIG += c++11
+
+equals(QT_MAJOR_VERSION, 6) {
+    QT += core5compat
+}
 
 qtHaveModule(xmlpatterns) {
     QT += xmlpatterns

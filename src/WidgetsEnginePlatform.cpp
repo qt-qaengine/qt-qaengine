@@ -914,6 +914,11 @@ bool WidgetsEnginePlatform::isItemVisible(QObject* item)
     return false;
 }
 
+qreal WidgetsEnginePlatform::itemOpacity(QObject *)
+{
+    return 1.0;
+}
+
 void WidgetsEnginePlatform::grabScreenshot(ITransportClient* socket,
                                            QObject* item,
                                            bool fillBackground)

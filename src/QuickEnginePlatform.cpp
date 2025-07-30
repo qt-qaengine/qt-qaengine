@@ -195,6 +195,18 @@ bool QuickEnginePlatform::isItemVisible(QObject* item)
     return q->isVisible();
 }
 
+qreal QuickEnginePlatform::itemOpacity(QObject *item)
+{
+    qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << item;
+
+    QQuickItem* q = qobject_cast<QQuickItem*>(item);
+    if (!q)
+    {
+        return 1.0;
+    }
+    return q->opacity();
+}
+
 QPointF QuickEnginePlatform::mapToGlobal(const QPointF &point)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)

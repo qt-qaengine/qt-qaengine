@@ -21,6 +21,7 @@ public:
     QSize getSize(QObject* item) override;
     bool isItemEnabled(QObject* item) override;
     bool isItemVisible(QObject* item) override;
+    qreal itemOpacity(QObject *item) override;
     QPointF mapToGlobal(const QPointF &point) override;
 
     QString getObjectId(QObject *item) override;

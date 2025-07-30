@@ -31,6 +31,7 @@ public slots:
     QSize getSize(QObject* item) override;
     bool isItemEnabled(QObject* item) override;
     bool isItemVisible(QObject* item) override;
+    qreal itemOpacity(QObject *) override;
 
 protected:
     QList<QObject*> childrenList(QObject* parentItem) override;

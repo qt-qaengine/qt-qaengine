@@ -33,7 +33,6 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     QList<QObject*> childrenList(QObject* parentItem) override;
-
     QQuickItem* findParentFlickable(QQuickItem* rootItem = nullptr);
     QVariantList findNestedFlickable(QQuickItem* parentItem = nullptr);
     QQuickItem* getApplicationWindow();
@@ -51,6 +50,7 @@ protected:
     void clearComponentCache();
 
     QQmlEngine* getEngine(QQuickItem* item = nullptr);
+    QObject* resolvePopupObject(QObject* popupItem) const;
 
     QQuickItem* m_rootQuickItem = nullptr;
     QQuickWindow* m_rootQuickWindow = nullptr;

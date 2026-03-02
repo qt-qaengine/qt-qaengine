@@ -22,6 +22,8 @@
 #include <private/qquickwindow_p.h>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QtQuickTemplates2/private/qquickoverlay_p.h>
+#include <QtQuickTemplates2/private/qquickpopup_p.h>
+#include <QtQuickTemplates2/private/qquickpopupitem_p_p.h>
 #endif
 
 #include <QLoggingCategory>
@@ -37,6 +39,18 @@ QList<QObject*> QuickEnginePlatform::childrenList(QObject* parentItem)
         result.append(m_rootQuickItem);
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    QQuickPopup* popup = qobject_cast<QQuickPopup*>(parentItem);
+    if (popup)
+    {
+        if (QQuickItem* popupItem = popup->popupItem())
+        {
+            result.append(popupItem);
+        }
+        return result;
+    }
+#endif
+
     QQuickItem* quick = qobject_cast<QQuickItem*>(parentItem);
     if (!quick)
     {
@@ -51,6 +65,13 @@ QList<QObject*> QuickEnginePlatform::childrenList(QObject* parentItem)
 
     for (QQuickItem* w : p->paintOrderChildItems())
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+        if (QObject* popupObject = resolvePopupObject(w))
+        {
+            result.append(popupObject);
+            continue;
+        }
+#endif
         result.append(w);
     }
 
@@ -131,6 +152,17 @@ QQuickItem* QuickEnginePlatform::getApplicationWindow()
 QPoint QuickEnginePlatform::getAbsPosition(QObject* item)
 {
     qCDebug(categoryQuickEnginePlatform) << Q_FUNC_INFO << item;
+
+    QQuickPopup* popup = qobject_cast<QQuickPopup*>(item);
+    if (popup)
+    {
+        QQuickItem* popupItem = popup->popupItem();
+        if (!popupItem)
+        {
+            return QPoint();
+        }
+        return getAbsPosition(popupItem);
+    }
 
     QQuickItem* q = qobject_cast<QQuickItem*>(item);
     if (!q)
@@ -315,7 +347,6 @@ void QuickEnginePlatform::initialize()
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
     ov = QQuickOverlay::overlay(m_rootQuickWindow);
-    qDebug() << "Have overlay:" << ov;
 #endif
 
     item->setParent(ov ? ov : m_rootQuickItem);
@@ -529,6 +560,28 @@ QQmlEngine* QuickEnginePlatform::getEngine(QQuickItem* item)
         engine = qmlEngine(item->childItems().first());
     }
     return engine;
+}
+
+QObject* QuickEnginePlatform::resolvePopupObject(QObject* popupItem) const
+{
+    if (!popupItem)
+    {
+        return nullptr;
+    }
+
+    QQuickPopupItem* quickPopupItem = qobject_cast<QQuickPopupItem*>(popupItem);
+    if (!quickPopupItem)
+    {
+        return nullptr;
+    }
+
+    QQuickPopupItemPrivate* d = QQuickPopupItemPrivate::get(quickPopupItem);
+    if (!d)
+    {
+        return nullptr;
+    }
+
+    return static_cast<QObject*>(d->popup);
 }
 
 void QuickEnginePlatform::executeCommand_touch_pressAndHold(ITransportClient* socket,

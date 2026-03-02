@@ -20,6 +20,9 @@
 
 #include <private/qquickitem_p.h>
 #include <private/qquickwindow_p.h>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QtQuickTemplates2/private/qquickoverlay_p.h>
+#endif
 
 #include <QLoggingCategory>
 
@@ -307,13 +310,25 @@ void QuickEnginePlatform::initialize()
         qWarning() << Q_FUNC_INFO << object << "object is not QQuickitem!";
         return;
     }
-    item->setParent(m_rootQuickItem);
-    item->setParentItem(m_rootQuickItem);
 
-    const auto childrens = childrenList(m_rootQuickItem);
-    const auto lastChildren = qobject_cast<QQuickItem*>(childrens.last());
+    QQuickItem *ov = nullptr;
 
-    item->setZ(lastChildren->z() + 1);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    ov = QQuickOverlay::overlay(m_rootQuickWindow);
+    qDebug() << "Have overlay:" << ov;
+#endif
+
+    item->setParent(ov ? ov : m_rootQuickItem);
+    item->setParentItem(ov ? ov : m_rootQuickItem);
+
+    if (ov) {
+        item->setZ(1e9);
+    } else {
+        const auto childrens = childrenList(m_rootQuickItem);
+        const auto lastChildren = qobject_cast<QQuickItem*>(childrens.last());
+
+        item->setZ(lastChildren->z() + 1);
+    }
 
     m_touchIndicator = item;
     m_rootWindow->installEventFilter(this);

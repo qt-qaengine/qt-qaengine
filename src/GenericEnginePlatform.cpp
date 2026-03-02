@@ -290,7 +290,7 @@ QObjectList GenericEnginePlatform::findItemsByClassName(const QString& className
 
     if (!parentItem)
     {
-        parentItem = rootObject();
+        parentItem = m_rootWindow;
     }
 
     if (checkMatch(className, getClassName(parentItem)))
@@ -561,10 +561,6 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
 
     QJsonObject object;
 
-    object.insert(QStringLiteral("enabled"), QJsonValue(isItemEnabled(item)));
-    object.insert(QStringLiteral("visible"), QJsonValue(isItemVisible(item)));
-    object.insert(QStringLiteral("opacity"), QJsonValue(itemOpacity(item)));
-
     QVariantList extraFilters;
     if (item != m_rootWindow) {
         for (const auto &filterVar : filters) {
@@ -597,6 +593,10 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
         }
     }
 
+    object.insert(QStringLiteral("enabled"), QJsonValue(isItemEnabled(item)));
+    object.insert(QStringLiteral("visible"), QJsonValue(isItemVisible(item)));
+    object.insert(QStringLiteral("opacity"), QJsonValue(itemOpacity(item)));
+
     const QString className = getClassName(item);
     object.insert(QStringLiteral("classname"), QJsonValue(className));
 
@@ -605,6 +605,12 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
 
     const QString objectId = getObjectId(item);
     object.insert(QStringLiteral("objectId"), QJsonValue(objectId));
+
+    const QRect rect = getGeometry(item);
+    object.insert(QStringLiteral("width"), QJsonValue(rect.width()));
+    object.insert(QStringLiteral("height"), QJsonValue(rect.height()));
+    object.insert(QStringLiteral("x"), QJsonValue(rect.x()));
+    object.insert(QStringLiteral("y"), QJsonValue(rect.y()));
 
     auto mo = item->metaObject();
     do
@@ -628,11 +634,12 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
         std::sort(v.begin(), v.end(), variantPairCompare);
         for (auto& i : v)
         {
-            if (object.contains(i.first))
-            {
-                continue;
-            }
-            else if (i.second.canConvert<QString>())
+            // if (object.contains(i.first))
+            // {
+            //     continue;
+            // }
+            // else
+                if (i.second.canConvert<QString>())
             {
                 object.insert(i.first, QJsonValue::fromVariant(i.second));
             }
@@ -643,11 +650,6 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
         }
     } while ((mo = mo->superClass()));
 
-    const QRect rect = getGeometry(item);
-    object.insert(QStringLiteral("width"), QJsonValue(rect.width()));
-    object.insert(QStringLiteral("height"), QJsonValue(rect.height()));
-    object.insert(QStringLiteral("x"), QJsonValue(rect.x()));
-    object.insert(QStringLiteral("y"), QJsonValue(rect.y()));
     object.insert(QStringLiteral("zDepth"), QJsonValue(depth));
 
     const QPoint abs = getAbsPosition(item);
@@ -1165,10 +1167,26 @@ void GenericEnginePlatform::onPropertyChanged()
         return;
     }
 #endif
+    if (propertyValue.toString() == "##any")
+    {
+        loop->quit();
+        return;
+    }
     const QVariant property = item->property(propertyName.toLatin1().constData());
+    qDebug() << Q_FUNC_INFO << item << propertyName << propertyValue << property;
+    if (propertyValue.toString() == "##notempty" && !property.toString().isEmpty())
+    {
+        loop->quit();
+        return;
+    }
+    {
+        loop->quit();
+        return;
+    }
     if (property == propertyValue)
     {
         loop->quit();
+        return;
     }
 }
 

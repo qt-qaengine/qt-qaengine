@@ -9,7 +9,8 @@ android {
     INSTALLS += target
 }
 
-QT += core core-private network
+QT += core core-private network quickcontrols2 quickcontrols2-private
+QT_PRIVATE += quicktemplates2-private
 CONFIG += plugin
 #CONFIG += c++11
 

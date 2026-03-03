@@ -2118,6 +2118,24 @@ void GenericEnginePlatform::findStrategy_parent(ITransportClient* socket,
     elementReply(socket, items, multiple);
 }
 
+void GenericEnginePlatform::findStrategy_root(ITransportClient* socket,
+                                              const QString& selector,
+                                              bool multiple,
+                                              QObject* parentItem)
+{
+    Q_UNUSED(parentItem)
+
+    QObject* item = nullptr;
+    const QString normalizedSelector = selector.trimmed().toLower();
+    if (normalizedSelector.isEmpty() || normalizedSelector == QStringLiteral("window"))
+    {
+        item = window();
+    }
+
+    qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << selector << multiple << item;
+    elementReply(socket, {item}, multiple);
+}
+
 void GenericEnginePlatform::findStrategy_xpath(ITransportClient* socket,
                                                const QString& selector,
                                                bool multiple,

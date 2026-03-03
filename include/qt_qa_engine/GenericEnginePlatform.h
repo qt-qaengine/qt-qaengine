@@ -303,6 +303,10 @@ private slots:
                              const QString& selector,
                              bool multiple = false,
                              QObject* parentItem = nullptr);
+    void findStrategy_root(ITransportClient* socket,
+                           const QString& selector,
+                           bool multiple = false,
+                           QObject* parentItem = nullptr);
     void findStrategy_xpath(ITransportClient* socket,
                             const QString& selector,
                             bool multiple = false,

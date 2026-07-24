@@ -2,6 +2,8 @@
 
 #include <qt_qa_engine/IEnginePlatform.h>
 
+#include <QPointer>
+
 class QAKeyMouseEngine;
 class QTouchEvent;
 class QMouseEvent;
@@ -130,7 +132,9 @@ protected:
     QWindow* m_rootWindow = nullptr;
     QObject* m_rootObject = nullptr;
 
-    QHash<QString, QObject*> m_items;
+    // QPointer clears on QObject::destroyed (before RemoveQObject); guards UAF
+    // if removeItem misses (e.g. focus moved to another platform window).
+    QHash<QString, QPointer<QObject>> m_items;
     QAKeyMouseEngine* m_keyMouseEngine = nullptr;
 
     QHash<QString, QStringList> m_blacklistedProperties;

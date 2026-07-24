@@ -559,9 +559,15 @@ void QAEngine::removeItem(QObject* o)
     {
         return;
     }
-    if (auto platform = getPlatform(true))
+    // Element ids live in the platform that found them (often Main), while
+    // RemoveQObject may run when focus is on another window (Call/Notification).
+    // Clear the pointer from every platform hash — not only the focused one.
+    for (auto platform : s_windows)
     {
-        platform->removeItem(o);
+        if (platform)
+        {
+            platform->removeItem(o);
+        }
     }
     if (s_lastFocusWindow == o)
     {

@@ -190,13 +190,12 @@ void GenericEnginePlatform::addItem(QObject* o)
 
 void GenericEnginePlatform::removeItem(QObject* o)
 {
-    QHash<QString, QObject*>::iterator i = m_items.begin();
+    QHash<QString, QPointer<QObject>>::iterator i = m_items.begin();
     while (i != m_items.end())
     {
-        if (i.value() == o)
+        if (i.value().data() == o || i.value().isNull())
         {
             i = m_items.erase(i);
-            break;
         }
         else
         {
@@ -496,12 +495,22 @@ QObjectList GenericEnginePlatform::filterVisibleItems(QObjectList items)
 
 bool GenericEnginePlatform::containsObject(const QString& elementId)
 {
-    return m_items.contains(elementId);
+    return getObject(elementId) != nullptr;
 }
 
 QObject* GenericEnginePlatform::getObject(const QString& elementId)
 {
-    return m_items.value(elementId);
+    const auto it = m_items.constFind(elementId);
+    if (it == m_items.constEnd())
+    {
+        return nullptr;
+    }
+    QObject* item = it.value().data();
+    if (!item)
+    {
+        m_items.remove(elementId);
+    }
+    return item;
 }
 
 QString GenericEnginePlatform::getText(QObject* item)

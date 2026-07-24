@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QMetaMethod>
+#include <QMetaProperty>
 #include <QRegularExpression>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #else
@@ -89,13 +90,54 @@ void GenericEnginePlatform::focusWindowChanged(QWindow *w)
     }
 }
 
+static QJsonValue qaVariantToJsonValue(const QVariant& value)
+{
+    // QJsonValue::fromVariant() returns Null when QVariant::isNull() is true even if the
+    // carried type is Bool. Also QVariant(false).toString() is "" — never stringify bools.
+    if (!value.isValid())
+    {
+        return QJsonValue(QJsonValue::Null);
+    }
+
+    switch (value.metaType().id())
+    {
+    case QMetaType::Bool:
+        return QJsonValue(value.toBool());
+    case QMetaType::Int:
+    case QMetaType::UInt:
+    case QMetaType::LongLong:
+    case QMetaType::ULongLong:
+    case QMetaType::Long:
+    case QMetaType::Short:
+    case QMetaType::UShort:
+        return QJsonValue(value.toLongLong());
+    case QMetaType::Double:
+    case QMetaType::Float:
+        return QJsonValue(value.toDouble());
+    case QMetaType::QString:
+        return QJsonValue(value.toString());
+    default:
+        break;
+    }
+
+    if (value.canConvert<bool>()
+        && (value.metaType().flags() & QMetaType::IsEnumeration) == 0
+        && value.userType() != QMetaType::QString
+        && value.typeId() == QMetaType::Bool)
+    {
+        return QJsonValue(value.toBool());
+    }
+
+    return QJsonValue::fromVariant(value);
+}
+
 void GenericEnginePlatform::socketReply(ITransportClient* socket, const QVariant& value, int status)
 {
     QByteArray data;
     {
         QJsonObject reply;
         reply.insert(QStringLiteral("status"), status);
-        reply.insert(QStringLiteral("value"), QJsonValue::fromVariant(value));
+        reply.insert(QStringLiteral("value"), qaVariantToJsonValue(value));
 
         data = QJsonDocument(reply).toJson(QJsonDocument::Compact);
     }
@@ -638,10 +680,13 @@ QJsonObject GenericEnginePlatform::dumpObject(QObject* item, const QVariantList 
             // {
             //     continue;
             // }
-            // else
-                if (i.second.canConvert<QString>())
+            if (i.second.metaType().id() == QMetaType::Bool)
             {
-                object.insert(i.first, QJsonValue::fromVariant(i.second));
+                object.insert(i.first, i.second.toBool());
+            }
+            else if (i.second.canConvert<QString>())
+            {
+                object.insert(i.first, qaVariantToJsonValue(i.second));
             }
             else if (i.second.canConvert<qint64>())
             {
@@ -1581,7 +1626,26 @@ void GenericEnginePlatform::getAttributeCommand(ITransportClient* socket,
         }
         else
         {
-            reply = item->property(attribute.toLatin1().constData());
+            const QByteArray attrName = attribute.toLatin1();
+            const int propIndex = item->metaObject()->indexOfProperty(attrName.constData());
+            if (propIndex >= 0)
+            {
+                const QMetaProperty metaProp = item->metaObject()->property(propIndex);
+                reply = metaProp.read(item);
+                // Force concrete bool so false does not become JSON null / "".
+                if (metaProp.metaType().id() == QMetaType::Bool)
+                {
+                    reply = QVariant(reply.toBool());
+                }
+            }
+            else
+            {
+                reply = item->property(attrName.constData());
+                if (reply.isValid() && reply.metaType().id() == QMetaType::Bool)
+                {
+                    reply = QVariant(reply.toBool());
+                }
+            }
         }
         socketReply(socket, reply);
     }

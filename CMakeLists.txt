@@ -1,5 +1,5 @@
-# CMake minimum required version set to 3.13 for unified policy CMP0077 following.
-cmake_minimum_required(VERSION 3.13)
+# Qt6 requires CMake 3.16 or newer.
+cmake_minimum_required(VERSION 3.16)
 
 # Load local CMake definitions. Before the project() command strictly!
 find_file(LOCAL_DEFS local_defs.cmake "${CMAKE_CURRENT_BINARY_DIR}" NO_DEFAULT_PATH)
@@ -10,14 +10,19 @@ elseif (CALLED_FROM_CBE)
     message(FATAL_ERROR "Can't find file ${CMAKE_CURRENT_BINARY_DIR}/local_defs.cmake!")
 endif ()
 
-project (qt_qa_engine)
+project (qt_qa_engine LANGUAGES CXX)
 
 include(GNUInstallDirs)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+# Enable widgets backend. Disabled by default, same as in qt_qa_engine.pro.
+option(QA_ENGINE_WITH_WIDGETS "Build the QWidgets engine platform" OFF)
+
 set(LIBS "")
 set(LIBS_DEFS "")
 set(LIBS_INCLUDES "")
+# Qt components this build actually uses, re-exported to qt_qa_engineConfig.cmake.
+set(QA_ENGINE_QT_COMPONENTS "")
 set(${PROJECT_NAME}_HEADERS "")
 set(${PROJECT_NAME}_SOURCES "")
 
@@ -28,69 +33,110 @@ if(UNIX AND NOT APPLE)
     set(MO_PATFORM_MOBILE ON)
 endif()
 
-# Find Qt5 Core module
-find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS Core REQUIRED)
-list(APPEND LIBS_INCLUDES ${Qt5Core_INCLUDE_DIRS})
-list(APPEND LIBS_DEFS ${Qt5Core_DEFINITIONS})
-list(APPEND LIBS Qt5::Core)
+# Prefer Qt6, fall back to Qt5.
+find_package(QT ${CURRENT_QT_VERSION} NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+set(QT Qt${QT_VERSION_MAJOR})
+message(STATUS "Building against ${QT} ${QT_VERSION}")
 
-# Find Qt5 Network module
-find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS Network REQUIRED)
-list(APPEND LIBS_INCLUDES ${Qt5Network_INCLUDE_DIRS})
-list(APPEND LIBS_DEFS ${Qt5Network_DEFINITIONS})
-list(APPEND LIBS Qt5::Network)
+# Qt6 ships private modules as separate components/targets, Qt5 exposes them only as
+# ${QT}<Module>_PRIVATE_INCLUDE_DIRS variables. qa_use_qt_module() hides the difference:
+# qa_use_qt_module(Quick PRIVATE) links the module and makes its private headers usable.
+macro(qa_use_qt_module module)
+    cmake_parse_arguments(_qa "PRIVATE" "" "" ${ARGN})
 
-find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS Quick)
-if (Qt5Quick_FOUND)
-    add_definitions(-DMO_USE_QUICK)
-    list(APPEND LIBS_INCLUDES ${Qt5Quick_INCLUDE_DIRS})
-    list(APPEND LIBS_INCLUDES ${Qt5Quick_PRIVATE_INCLUDE_DIRS})
-    list(APPEND LIBS_DEFS ${Qt5Quick_DEFINITIONS})
-    list(APPEND LIBS Qt5::Quick)
+    if (QT_VERSION_MAJOR GREATER_EQUAL 6)
+        set(_qa_components ${module})
+        if (_qa_PRIVATE)
+            list(APPEND _qa_components ${module}Private)
+        endif()
+        find_package(${QT} ${CURRENT_QT_VERSION} REQUIRED COMPONENTS ${_qa_components})
 
-    # Find Qt5 Qml module
-    find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS Qml REQUIRED)
-    list(APPEND LIBS_INCLUDES ${Qt5Qml_INCLUDE_DIRS})
-    list(APPEND LIBS_DEFS ${Qt5Qml_DEFINITIONS})
-    list(APPEND LIBS Qt5::Qml)
+        list(APPEND QA_ENGINE_QT_COMPONENTS ${_qa_components})
+        list(APPEND LIBS ${QT}::${module})
+        if (_qa_PRIVATE)
+            list(APPEND LIBS ${QT}::${module}Private)
+        endif()
+    else()
+        find_package(${QT} ${CURRENT_QT_VERSION} REQUIRED COMPONENTS ${module})
+
+        list(APPEND QA_ENGINE_QT_COMPONENTS ${module})
+        list(APPEND LIBS ${QT}::${module})
+        list(APPEND LIBS_INCLUDES ${${QT}${module}_INCLUDE_DIRS})
+        list(APPEND LIBS_DEFS ${${QT}${module}_DEFINITIONS})
+        if (_qa_PRIVATE)
+            list(APPEND LIBS_INCLUDES ${${QT}${module}_PRIVATE_INCLUDE_DIRS})
+        endif()
+    endif()
+endmacro()
+
+# Core / Gui / Network. Private modules are needed for qhooks_p.h, qmetaobject_p.h,
+# qmetatype_p.h, qvariantanimation_p.h, qeventpoint_p.h and qwindow_p.h.
+qa_use_qt_module(Core PRIVATE)
+qa_use_qt_module(Gui PRIVATE)
+qa_use_qt_module(Network)
+
+find_package(${QT} ${CURRENT_QT_VERSION} QUIET COMPONENTS Quick)
+set(QA_ENGINE_HAS_QUICK ${${QT}Quick_FOUND})
+if (QA_ENGINE_HAS_QUICK)
+    list(APPEND LIBS_DEFS MO_USE_QUICK)
+
+    qa_use_qt_module(Qml)
+    qa_use_qt_module(Quick PRIVATE)
+
+    # QQuickPopup support is compiled in for Qt 5.10 and newer only,
+    # see the QT_VERSION_CHECK(5, 10, 0) guards in src/QuickEnginePlatform.cpp.
+    if (QT_VERSION VERSION_GREATER_EQUAL 5.10)
+        qa_use_qt_module(QuickControls2 PRIVATE)
+
+        # QuickEnginePlatform.cpp includes <QtQuickTemplates2/private/qquickpopup_p.h>.
+        # QuickTemplates2 is an internal module: Qt6 exports it as a component, Qt5 does
+        # not always ship a CMake config for it, so fall back to the on-disk header layout
+        # (<qt>/include/QtQuickTemplates2/<version>/QtQuickTemplates2/private/*.h).
+        find_package(${QT} ${CURRENT_QT_VERSION} QUIET COMPONENTS QuickTemplates2)
+        if (${QT}QuickTemplates2_FOUND)
+            qa_use_qt_module(QuickTemplates2 PRIVATE)
+        else()
+            list(GET ${QT}Core_INCLUDE_DIRS 0 _qa_qtcore_include)
+            get_filename_component(_qa_qt_include "${_qa_qtcore_include}" DIRECTORY)
+            list(APPEND LIBS_INCLUDES
+                "${_qa_qt_include}/QtQuickTemplates2"
+                "${_qa_qt_include}/QtQuickTemplates2/${QT_VERSION}"
+                "${_qa_qt_include}/QtQuickTemplates2/${QT_VERSION}/QtQuickTemplates2"
+            )
+            message(STATUS "${QT}QuickTemplates2 CMake config not found, using headers from ${_qa_qt_include}/QtQuickTemplates2")
+        endif()
+    endif()
 
     list(APPEND ${PROJECT_NAME}_HEADERS include/qt_qa_engine/QuickEnginePlatform.h)
     list(APPEND ${PROJECT_NAME}_SOURCES src/QuickEnginePlatform.cpp)
 
-    qt5_add_resources(QRC_RESOURCES qml/qtqaengine.qrc)
+    if (QT_VERSION_MAJOR GREATER_EQUAL 6)
+        qt6_add_resources(QRC_RESOURCES qml/qtqaengine.qrc)
+    else()
+        qt5_add_resources(QRC_RESOURCES qml/qtqaengine.qrc)
+    endif()
 endif()
 
-find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS Widgets)
-if (Qt5Widgets_FOUND)
-    add_definitions(-DMO_USE_QWIDGETS)
-    list(APPEND LIBS_INCLUDES ${Qt5Widgets_INCLUDE_DIRS})
-    list(APPEND LIBS_INCLUDES ${Qt5Widgets_PRIVATE_INCLUDE_DIRS})
-    list(APPEND LIBS_DEFS ${Qt5Widgets_DEFINITIONS})
-    list(APPEND LIBS Qt5::Widgets)
+if (QA_ENGINE_WITH_WIDGETS)
+    list(APPEND LIBS_DEFS MO_USE_QWIDGETS)
+    qa_use_qt_module(Widgets PRIVATE)
 
     list(APPEND ${PROJECT_NAME}_HEADERS include/qt_qa_engine/WidgetsEnginePlatform.h)
     list(APPEND ${PROJECT_NAME}_SOURCES src/WidgetsEnginePlatform.cpp)
 endif()
 
-
-#find_package(Qt5 ${CURRENT_QT_VERSION} COMPONENTS XmlPatterns)
-#if (Qt5XmlPatterns_FOUND)
-#    add_definitions(-DMO_USE_QXMLPATTERNS)
-#    list(APPEND LIBS_INCLUDES ${Qt5XmlPatterns_INCLUDE_DIRS})
-#    list(APPEND LIBS_DEFS ${Qt5XmlPatterns_DEFINITIONS})
-#    list(APPEND LIBS Qt5::XmlPatterns)
-#endif()
-
-# workaround for ios cmake bug with wrong paths in _PRIVATE_INCLUDE_DIRS
-# removing Versions/5/ from its paths
-foreach(di ${LIBS_INCLUDES})
-    if(NOT IS_DIRECTORY ${di})
-        string(REPLACE "Versions/5/" "" do "${di}")
-        if(NOT "${di}" STREQUAL "${do}" AND IS_DIRECTORY ${do})
-            list(APPEND LIBS_INCLUDES ${do})
+if (QT_VERSION_MAJOR LESS 6)
+    # workaround for ios cmake bug with wrong paths in _PRIVATE_INCLUDE_DIRS
+    # removing Versions/5/ from its paths
+    foreach(di ${LIBS_INCLUDES})
+        if(NOT IS_DIRECTORY ${di})
+            string(REPLACE "Versions/5/" "" do "${di}")
+            if(NOT "${di}" STREQUAL "${do}" AND IS_DIRECTORY ${do})
+                list(APPEND LIBS_INCLUDES ${do})
+            endif()
         endif()
-    endif()
-endforeach()
+    endforeach()
+endif()
 
 list(APPEND
     ${PROJECT_NAME}_HEADERS
@@ -123,7 +169,7 @@ list(APPEND
 
 # > Generated moc_*.cpp and *.moc files are placed in the build directory
 # so it is convenient to set the CMAKE_INCLUDE_CURRENT_DIR variable.
-# @see https://cmake.org/cmake/help/v3.1/manual/cmake-qt.7.html#automoc
+# @see https://cmake.org/cmake/help/latest/manual/cmake-qt.7.html#automoc
 
 add_library (${PROJECT_NAME} SHARED
     ${QA_LIB_CONFIG}
@@ -132,8 +178,15 @@ add_library (${PROJECT_NAME} SHARED
     ${${PROJECT_NAME}_HEADERS}
 )
 
+# Qt6 requires C++17, Qt5 builds keep the C++11 baseline of qt_qa_engine.pro.
+if (QT_VERSION_MAJOR GREATER_EQUAL 6)
+    set(QA_ENGINE_CXX_STANDARD 17)
+else()
+    set(QA_ENGINE_CXX_STANDARD 11)
+endif()
+
 set_target_properties (${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 11
+    CXX_STANDARD ${QA_ENGINE_CXX_STANDARD}
     CXX_STANDARD_REQUIRED YES
     AUTOMOC ON
     EXPORT_NAME QAEngineLib
@@ -172,6 +225,9 @@ set(TARGETS_EXPORT_FILE "${TARGETS_EXPORT_NAME}.cmake")
 set(PROJECT_CONFIG "${PROJECT_NAME}Config.cmake")
 set(PROJECT_CONFIG_IN "${PROJECT_CONFIG}.in")
 set(NAMESPACE "AutoQA::")
+set(REQUIRED_QT_VERSION "${QT_VERSION}")
+list(REMOVE_DUPLICATES QA_ENGINE_QT_COMPONENTS)
+string(REPLACE ";" " " QA_ENGINE_QT_COMPONENTS "${QA_ENGINE_QT_COMPONENTS}")
 
 if (ANDROID)
     set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}/")

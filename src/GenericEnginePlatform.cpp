@@ -2480,8 +2480,11 @@ void GenericEnginePlatform::executeCommand_app_click(ITransportClient *socket, q
 
 void GenericEnginePlatform::executeCommand_app_exit(ITransportClient* socket, double code)
 {
+    // Reply first, then quit on next event-loop turn so the TCP reply is flushed
+    // before the process tears down (avoids Appium hanging on a half-closed socket).
     socketReply(socket, QString());
-    qApp->exit(code);
+    const int exitCode = static_cast<int>(code);
+    QTimer::singleShot(0, qApp, [exitCode]() { qApp->exit(exitCode); });
 }
 
 void GenericEnginePlatform::executeCommand_app_crash(ITransportClient *socket)

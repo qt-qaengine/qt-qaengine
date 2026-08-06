@@ -34,6 +34,11 @@ QList<QObject*> QuickEnginePlatform::childrenList(QObject* parentItem)
 {
     QList<QObject*> result;
 
+    if (!parentItem)
+    {
+        return result;
+    }
+
     if (parentItem == m_rootQuickWindow)
     {
         result.append(m_rootQuickItem);
@@ -244,6 +249,10 @@ qreal QuickEnginePlatform::itemOpacity(QObject *item)
 
 QPointF QuickEnginePlatform::mapToGlobal(const QPointF &point)
 {
+    if (!m_rootQuickItem)
+    {
+        return point;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     return m_rootQuickItem->mapToGlobal(point);
 #else
@@ -321,6 +330,17 @@ void QuickEnginePlatform::initialize()
     m_rootQuickWindow = qWindow;
     m_rootQuickItem = qWindow->contentItem();
     m_rootObject = m_rootQuickItem;
+
+    // Click handlers may destroy this Window while KeyMouseEngine still runs
+    // (nested QEventLoop in clickPoint). Null roots so mapToGlobal/onMouseEvent
+    // do not UAF.
+    connect(m_rootWindow, &QObject::destroyed, this, [this]() {
+        m_touchIndicator = nullptr;
+        m_rootQuickItem = nullptr;
+        m_rootQuickWindow = nullptr;
+        m_rootObject = nullptr;
+        m_rootWindow = nullptr;
+    });
 
     // initialize touch indicator
     QQmlEngine* engine = getEngine();

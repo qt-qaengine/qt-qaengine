@@ -15,6 +15,7 @@
 #include <QJsonValue>
 #include <QMetaMethod>
 #include <QMetaProperty>
+#include <QPointer>
 #include <QRegularExpression>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #else
@@ -22,6 +23,7 @@
 #endif
 #include <QStandardPaths>
 #include <QTimer>
+#include <QWindow>
 #include <QXmlStreamWriter>
 #include <QVariant>
 
@@ -236,6 +238,25 @@ void GenericEnginePlatform::findByProperty(ITransportClient* socket,
     elementReply(socket, items, multiple);
 }
 
+namespace {
+
+QList<QPointer<QObject>> toGuardedChildren(const QList<QObject*>& children)
+{
+    QList<QPointer<QObject>> out;
+    out.reserve(children.size());
+    // Snapshot under QPointer so destroy mid-walk skips dead nodes instead of UAF.
+    for (QObject* child : children)
+    {
+        if (child)
+        {
+            out.append(QPointer<QObject>(child));
+        }
+    }
+    return out;
+}
+
+} // namespace
+
 QObject* GenericEnginePlatform::findItemById(const QString& id, QObject* parentItem)
 {
     qCDebug(categoryGenericEnginePlatformFind) << Q_FUNC_INFO << id << parentItem;
@@ -244,15 +265,24 @@ QObject* GenericEnginePlatform::findItemById(const QString& id, QObject* parentI
     {
         parentItem = rootObject();
     }
-
-    if (checkMatch(id, uniqueId(parentItem)))
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
     {
-        return parentItem;
+        return nullptr;
     }
 
-    for (QObject* child : childrenList(parentItem))
+    if (checkMatch(id, uniqueId(parent.data())))
     {
-        QObject* recursiveItem = findItemById(id, child);
+        return parent.data();
+    }
+
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
+    {
+        if (!child)
+        {
+            continue;
+        }
+        QObject* recursiveItem = findItemById(id, child.data());
         if (recursiveItem)
         {
             return recursiveItem;
@@ -271,19 +301,27 @@ QObjectList GenericEnginePlatform::findItemsByObjectName(const QString& objectNa
     {
         parentItem = rootObject();
     }
-
-    if (checkMatch(objectName, parentItem->objectName()))
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
     {
-        items.append(parentItem);
+        return items;
+    }
+
+    if (checkMatch(objectName, parent->objectName()))
+    {
+        items.append(parent.data());
         if (!multiple) {
             return items;
         }
     }
 
-    for (QObject* child : childrenList(parentItem))
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
     {
-        QObjectList recursiveItems = findItemsByObjectName(objectName, child);
-        items.append(recursiveItems);
+        if (!child)
+        {
+            continue;
+        }
+        items.append(findItemsByObjectName(objectName, child.data(), multiple));
         if (!items.isEmpty() && !multiple) {
             return items;
         }
@@ -301,19 +339,27 @@ QObjectList GenericEnginePlatform::findItemsByObjectId(const QString &objectId, 
     {
         parentItem = rootObject();
     }
-
-    if (checkMatch(objectId, getObjectId(parentItem)))
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
     {
-        items.append(parentItem);
+        return items;
+    }
+
+    if (checkMatch(objectId, getObjectId(parent.data())))
+    {
+        items.append(parent.data());
         if (!multiple) {
             return items;
         }
     }
 
-    for (QObject* child : childrenList(parentItem))
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
     {
-        QObjectList recursiveItems = findItemsByObjectId(objectId, child);
-        items.append(recursiveItems);
+        if (!child)
+        {
+            continue;
+        }
+        items.append(findItemsByObjectId(objectId, child.data(), multiple));
         if (!items.isEmpty() && !multiple) {
             return items;
         }
@@ -333,19 +379,27 @@ QObjectList GenericEnginePlatform::findItemsByClassName(const QString& className
     {
         parentItem = m_rootWindow;
     }
-
-    if (checkMatch(className, getClassName(parentItem)))
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
     {
-        items.append(parentItem);
+        return items;
+    }
+
+    if (checkMatch(className, getClassName(parent.data())))
+    {
+        items.append(parent.data());
         if (!multiple) {
             return items;
         }
     }
 
-    for (QObject* child : childrenList(parentItem))
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
     {
-        QObjectList recursiveItems = findItemsByClassName(className, child);
-        items.append(recursiveItems);
+        if (!child)
+        {
+            continue;
+        }
+        items.append(findItemsByClassName(className, child.data(), multiple));
         if (!items.isEmpty() && !multiple) {
             return items;
         }
@@ -367,19 +421,27 @@ QObjectList GenericEnginePlatform::findItemsByProperty(const QString& propertyNa
     {
         parentItem = rootObject();
     }
-
-    if (parentItem->property(propertyName.toLatin1().constData()) == propertyValue)
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
     {
-        items.append(parentItem);
+        return items;
+    }
+
+    if (parent->property(propertyName.toLatin1().constData()) == propertyValue)
+    {
+        items.append(parent.data());
         if (!multiple) {
             return items;
         }
     }
 
-    for (QObject* child : childrenList(parentItem))
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
     {
-        QObjectList recursiveItems = findItemsByProperty(propertyName, propertyValue, child, multiple);
-        items.append(recursiveItems);
+        if (!child)
+        {
+            continue;
+        }
+        items.append(findItemsByProperty(propertyName, propertyValue, child.data(), multiple));
         if (!items.isEmpty() && !multiple) {
             return items;
         }
@@ -400,20 +462,28 @@ QObjectList GenericEnginePlatform::findItemsByText(const QString& text,
     {
         parentItem = rootObject();
     }
+    const QPointer<QObject> parent(parentItem);
+    if (!parent)
+    {
+        return items;
+    }
 
-    const QString& itemText = getText(parentItem);
+    const QString itemText = getText(parent.data());
     if ((partial && itemText.contains(text)) || (!partial && itemText == text))
     {
-        items.append(parentItem);
+        items.append(parent.data());
         if (!multiple) {
             return items;
         }
     }
 
-    for (QObject* child : childrenList(parentItem))
+    for (const QPointer<QObject>& child : toGuardedChildren(childrenList(parent.data())))
     {
-        QObjectList recursiveItems = findItemsByText(text, partial, child);
-        items.append(recursiveItems);
+        if (!child)
+        {
+            continue;
+        }
+        items.append(findItemsByText(text, partial, child.data(), multiple));
         if (!items.isEmpty() && !multiple) {
             return items;
         }
@@ -852,10 +922,31 @@ bool GenericEnginePlatform::recursiveDumpXml(QXmlStreamWriter* writer, QObject* 
 
 void GenericEnginePlatform::clickItem(QObject* item)
 {
+    if (!item)
+    {
+        return;
+    }
+
+    // Click may destroy the item / root window (e.g. CallWindow Decline).
+    // Keep QPointers so nested QEventLoop in clickPoint cannot UAF.
+    QPointer<QObject> itemGuard(item);
+    QPointer<QWindow> rootGuard(m_rootWindow);
+
     const QPoint clickPos = getClickPosition(item);
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << item << clickPos;
 
+    if (!itemGuard)
+    {
+        return;
+    }
+
     clickPoint(clickPos.x(), clickPos.y());
+
+    if (!rootGuard)
+    {
+        qCWarning(categoryGenericEnginePlatform)
+            << Q_FUNC_INFO << "root window destroyed during click";
+    }
 }
 
 QString GenericEnginePlatform::getClassName(QObject* item)
@@ -900,6 +991,16 @@ void GenericEnginePlatform::clickPoint(float posx, float posy)
     QTimer timer;
     timer.setSingleShot(true);
     timer.setInterval(50);
+    QPointer<QWindow> rootGuard(m_rootWindow);
+    if (rootGuard)
+    {
+        // Quit early if click handler destroys this platform's window.
+        QObject::connect(rootGuard.data(),
+                         &QObject::destroyed,
+                         &loop,
+                         &QEventLoop::quit,
+                         Qt::DirectConnection);
+    }
     connect(m_keyMouseEngine->click(QPointF(posx, posy)),
             &QAPendingEvent::completed,
             &timer,
@@ -1057,6 +1158,8 @@ bool GenericEnginePlatform::waitForPropertyChange(QObject* item,
     }
     QEventLoop loop;
     QTimer timer;
+    QPointer<QObject> itemGuard(item);
+    QPointer<QWindow> rootGuard(m_rootWindow);
     item->setProperty("WaitForPropertyChangeEventLoop", QVariant::fromValue(&loop));
     item->setProperty("WaitForPropertyChangePropertyName", propertyName);
     item->setProperty("WaitForPropertyChangePropertyValue", value);
@@ -1064,9 +1167,20 @@ bool GenericEnginePlatform::waitForPropertyChange(QObject* item,
         metaObject()->method(metaObject()->indexOfSlot("onPropertyChanged()"));
     connect(item, prop.notifySignal(), this, propertyChanged);
     connect(&timer, &QTimer::timeout, this, [&loop]() { loop.exit(1); });
+    if (rootGuard)
+    {
+        QObject::connect(rootGuard.data(),
+                         &QObject::destroyed,
+                         &loop,
+                         [&loop]() { loop.exit(1); },
+                         Qt::DirectConnection);
+    }
     timer.start(timeout);
     int result = loop.exec();
-    disconnect(item, prop.notifySignal(), this, propertyChanged);
+    if (itemGuard)
+    {
+        disconnect(itemGuard.data(), prop.notifySignal(), this, propertyChanged);
+    }
 
     return result == 0;
 }
@@ -1334,6 +1448,10 @@ void GenericEnginePlatform::onMouseEvent(const QMouseEvent& event)
 #else
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << event.type() << event.localPos() << event.screenPos() << event.button() << event.buttons() << event.modifiers();
 #endif
+    if (!m_rootWindow)
+    {
+        return;
+    }
     QWindowSystemInterface::handleMouseEvent(m_rootWindow,
                                              event.timestamp(),
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -1835,16 +1953,16 @@ void GenericEnginePlatform::clickCommand(ITransportClient* socket, const QString
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << elementId;
 
-    QObject* item = getObject(elementId);
-    if (item)
-    {
-        clickItem(item);
-        socketReply(socket, QString());
-    }
-    else
+    QPointer<QObject> item = getObject(elementId);
+    if (!item)
     {
         socketReply(socket, QString(), 1);
+        return;
     }
+
+    // clickItem may destroy the platform root (CallWindow hangup). Always reply.
+    clickItem(item.data());
+    socketReply(socket, QString());
 }
 
 void GenericEnginePlatform::clearCommand(ITransportClient* socket, const QString& elementId)
@@ -2081,11 +2199,34 @@ void GenericEnginePlatform::performActionsCommand(ITransportClient* socket,
         return;
     }
 
+    QPointer<QAKeyMouseEngine> engine(m_keyMouseEngine);
+    QPointer<QWindow> rootGuard(m_rootWindow);
+    if (!engine || !rootGuard)
+    {
+        socketReply(socket, QString(), 1);
+        return;
+    }
+
+    QAPendingEvent* pending = engine->performChainActions(params);
+    if (!pending)
+    {
+        socketReply(socket, QString(), 1);
+        return;
+    }
+
     QEventLoop loop;
-    connect(m_keyMouseEngine->performChainActions(params),
-            &QAPendingEvent::completed,
-            &loop,
-            &QEventLoop::quit);
+    QObject::connect(rootGuard.data(),
+                     &QObject::destroyed,
+                     &loop,
+                     &QEventLoop::quit,
+                     Qt::DirectConnection);
+    // If engine dies mid-action, do not hang forever in loop.exec().
+    QObject::connect(engine.data(),
+                     &QObject::destroyed,
+                     &loop,
+                     &QEventLoop::quit,
+                     Qt::DirectConnection);
+    connect(pending, &QAPendingEvent::completed, &loop, &QEventLoop::quit);
     loop.exec();
 
     socketReply(socket, QString());
@@ -2148,7 +2289,7 @@ void GenericEnginePlatform::findStrategy_classname(ITransportClient* socket,
                                                    bool multiple,
                                                    QObject* parentItem)
 {
-    QObjectList items = findItemsByClassName(selector, parentItem);
+    QObjectList items = findItemsByClassName(selector, parentItem, multiple);
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << selector << multiple << items;
     elementReply(socket, items, multiple);
 }

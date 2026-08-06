@@ -159,6 +159,8 @@ void QAKeyMouseEngine::setMode(QAKeyMouseEngine::MouseMode mode)
 
 QAPendingEvent* QAKeyMouseEngine::click(const QPointF& point)
 {
+    // Keep press→release short: long waits process Qt.callLater/Timers that may
+    // destroy the target Window (CallWindow hangup) mid-click → UAF in mapToGlobal.
     QVariantList action = {
         QVariantMap{
             {"action", "press"},
@@ -175,7 +177,7 @@ QAPendingEvent* QAKeyMouseEngine::click(const QPointF& point)
             {
                 "options",
                 QVariantMap{
-                    {"ms", 200},
+                    {"ms", 50},
                 },
             },
         },
@@ -333,14 +335,10 @@ void QAKeyMouseEngine::pressEnter()
 QAPendingEvent* QAKeyMouseEngine::performMultiAction(const QVariantList& multiActions)
 {
 #if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    // QAEngine::instance()->getPlatform()->activateWindow();
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
+    QThread::msleep(20);
 #endif
 
-    QAPendingEvent* event = new QAPendingEvent(this);
+    QAPendingEvent* event = new QAPendingEvent(nullptr);
     event->setProperty("finishedCount", 0);
     QReadWriteLock* lock = new QReadWriteLock();
 
@@ -382,14 +380,10 @@ QAPendingEvent* QAKeyMouseEngine::performMultiAction(const QVariantList& multiAc
 QAPendingEvent* QAKeyMouseEngine::performTouchAction(const QVariantList& actions)
 {
 #if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    // QAEngine::instance()->getPlatform()->activateWindow();
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
+    QThread::msleep(20);
 #endif
 
-    QAPendingEvent* event = new QAPendingEvent(this);
+    QAPendingEvent* event = new QAPendingEvent(nullptr);
     EventWorker* worker = EventWorker::PerformTouchAction(actions);
     connect(worker, &EventWorker::pressed, this, &QAKeyMouseEngine::onPressed);
     connect(worker, &EventWorker::moved, this, &QAKeyMouseEngine::onMoved);
@@ -411,14 +405,15 @@ QAPendingEvent* QAKeyMouseEngine::performChainActions(const QVariantList& action
 {
     qCDebug(categoryKeyMouseEngine) << Q_FUNC_INFO << actions;
 #if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    // QAEngine::instance()->getPlatform()->activateWindow();
-
-    QEventLoop loop;
-    QTimer::singleShot(100, &loop, &QEventLoop::quit);
-    loop.exec();
+    // Do NOT pump the Qt event loop here. A nested QEventLoop lets WebChannel /
+    // CallWindow teardown run mid-command and then QAPendingEvent(this) SIGSEGVs
+    // in QObject::QObject (dangling parent / heap corruption).
+    QThread::msleep(20);
 #endif
 
-    QAPendingEvent* event = new QAPendingEvent(this);
+    // Parent-less: engine may be torn down while actions finish; completed+deleteLater
+    // must not depend on KeyMouseEngine QObject lifetime.
+    QAPendingEvent* event = new QAPendingEvent(nullptr);
     EventWorker* worker = EventWorker::PerformChainAction(actions);
     connect(worker, &EventWorker::keyPressed, this, &QAKeyMouseEngine::onKeyPressed);
     connect(worker, &EventWorker::keyReleased, this, &QAKeyMouseEngine::onKeyReleased);
@@ -428,7 +423,7 @@ QAPendingEvent* QAKeyMouseEngine::performChainActions(const QVariantList& action
     connect(worker, &EventWorker::mouseWheeled, this, &QAKeyMouseEngine::onMouseWheeled);
     connect(worker,
             &EventWorker::finished,
-            this,
+            event,
             [event]()
             {
                 qDebug() << Q_FUNC_INFO << "0 event finished";
@@ -476,7 +471,11 @@ void QAKeyMouseEngine::onPressed(const QPointF point)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -531,7 +530,11 @@ void QAKeyMouseEngine::onPressed(const QPointF point)
     {
         Qt::MouseButton btn = Qt::LeftButton;
         m_buttons |= btn;
-        QMouseEvent me(QEvent::MouseButtonPress, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), btn, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseButtonPress, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), btn, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -550,7 +553,11 @@ void QAKeyMouseEngine::onMoved(const QPointF point)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -599,7 +606,11 @@ void QAKeyMouseEngine::onMoved(const QPointF point)
     }
     else
     {
-        QMouseEvent me(QEvent::MouseMove, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), Qt::LeftButton, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseMove, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), Qt::LeftButton, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -618,7 +629,11 @@ void QAKeyMouseEngine::onReleased(const QPointF point)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -670,7 +685,11 @@ void QAKeyMouseEngine::onReleased(const QPointF point)
     {
         Qt::MouseButton btn = Qt::LeftButton;
         m_buttons &= ~btn;
-        QMouseEvent me(QEvent::MouseButtonRelease, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), btn, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseButtonRelease, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), btn, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -717,7 +736,11 @@ void QAKeyMouseEngine::onMousePressed(const QPointF &point, int button)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -780,7 +803,11 @@ void QAKeyMouseEngine::onMousePressed(const QPointF &point, int button)
             btn = Qt::RightButton;
         }
         m_buttons |= btn;
-        QMouseEvent me(QEvent::MouseButtonPress, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), btn, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseButtonPress, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), btn, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -799,7 +826,11 @@ void QAKeyMouseEngine::onMouseReleased(const QPointF &point, int button)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -858,7 +889,11 @@ void QAKeyMouseEngine::onMouseReleased(const QPointF &point, int button)
             btn = Qt::RightButton;
         }
         m_buttons &= ~btn;
-        QMouseEvent me(QEvent::MouseButtonRelease, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), btn, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseButtonRelease, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), btn, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -877,7 +912,11 @@ void QAKeyMouseEngine::onMouseMoved(const QPointF &point)
         QMutableEventPoint::setEllipseDiameters(tp, {16, 16});
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
-        QMutableEventPoint::setGlobalPosition(tp, QAEngine::instance()->getPlatform()->mapToGlobal(point));
+        QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point));
         QMutableEventPoint::setTimestamp(tp, m_eta->elapsed());
         QMutableEventPoint::setPressTimestamp(tp, m_eta->elapsed());
 
@@ -927,7 +966,11 @@ void QAKeyMouseEngine::onMouseMoved(const QPointF &point)
     }
     else
     {
-        QMouseEvent me(QEvent::MouseMove, point, point, QAEngine::instance()->getPlatform()->mapToGlobal(point), Qt::NoButton, m_buttons, m_mods);
+        QMouseEvent me(QEvent::MouseMove, point, point, ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point), Qt::NoButton, m_buttons, m_mods);
         me.setTimestamp(m_eta->elapsed());
         emit mouseEvent(me);
     }
@@ -942,7 +985,11 @@ void QAKeyMouseEngine::onMouseWheeled(const QPointF &delta, const QPointF &point
     }
     else
     {
-        QPoint globalPos = QAEngine::instance()->getPlatform()->mapToGlobal(point).toPoint();
+        QPoint globalPos = ([](const QPointF &pt) -> QPointF {
+            if (auto *platform = QAEngine::instance()->getPlatform(true))
+                return platform->mapToGlobal(pt);
+            return pt;
+        })(point).toPoint();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         QWheelEvent we(point, globalPos, delta.toPoint(), QPoint(),

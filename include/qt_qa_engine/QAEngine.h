@@ -19,6 +19,7 @@ public:
     IEnginePlatform* getPlatform(bool silent = false);
 
     virtual ~QAEngine();
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     static QString processName();
     static bool metaInvoke(ITransportClient* socket,

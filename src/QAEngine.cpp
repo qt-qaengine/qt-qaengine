@@ -18,11 +18,13 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
+#include <QEvent>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaMethod>
+#include <QPointer>
 #include <QProcessEnvironment>
 #include <QTcpSocket>
 #include <QTimer>
@@ -49,8 +51,20 @@ QAEngine* s_instance = nullptr;
 QString s_processName = "qaengine";
 bool s_exiting = false;
 
-QHash<QWindow*, IEnginePlatform*> s_windows;
-QWindow* s_lastFocusWindow = nullptr;
+QHash<QWindow*, QPointer<IEnginePlatform>> s_windows;
+QPointer<QWindow> s_lastFocusWindow;
+
+void beginExit()
+{
+    if (s_exiting)
+    {
+        return;
+    }
+    s_exiting = true;
+    // QFile/QObject created from dtors (JsonConfig::sync) must not hit AddQObject.
+    qtHookData[QHooks::AddQObject] = 0;
+    qtHookData[QHooks::RemoveQObject] = 0;
+}
 
 inline QGenericArgument qVariantToArgument(const QVariant& variant)
 {
@@ -70,7 +84,7 @@ bool QAEngine::isLoaded()
 
 void QAEngine::objectCreated(QObject* o)
 {
-    if (!s_instance)
+    if (s_exiting || !s_instance)
     {
         return;
     }
@@ -80,7 +94,7 @@ void QAEngine::objectCreated(QObject* o)
 
 void QAEngine::objectRemoved(QObject* o)
 {
-    if (!s_instance)
+    if (s_exiting || !s_instance)
     {
         return;
     }
@@ -90,9 +104,14 @@ void QAEngine::objectRemoved(QObject* o)
 
 IEnginePlatform* QAEngine::getPlatform(bool silent)
 {
-    if (s_windows.contains(s_lastFocusWindow))
+    if (!s_lastFocusWindow)
     {
-        return s_windows.value(s_lastFocusWindow);
+        return nullptr;
+    }
+    const auto platform = s_windows.value(s_lastFocusWindow);
+    if (platform)
+    {
+        return platform;
     }
     else
     {
@@ -146,12 +165,16 @@ void QAEngine::initializeEngine()
     qtHookData[QHooks::RemoveQObject] = reinterpret_cast<quintptr>(&QAEngine::objectRemoved);
     qtHookData[QHooks::AddQObject] = reinterpret_cast<quintptr>(&QAEngine::objectCreated);
 
+    // Event filter sees QEvent::Quit before aboutToQuit. Chattti's aboutToQuit
+    // (destroyQmlEngine) is often connected first, so uninstall hooks here in
+    // beginExit — not only in aboutToQuit.
+    qApp->installEventFilter(this);
     connect(qApp,
             &QCoreApplication::aboutToQuit,
             []()
             {
                 qCDebug(categoryEngine) << Q_FUNC_INFO << "about to quit!";
-                s_exiting = true;
+                beginExit();
             });
 
     connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &QAEngine::onFocusWindowChanged);
@@ -166,7 +189,7 @@ void QAEngine::initializeEngine()
                 &QTimer::timeout,
                 [this, t]()
                 {
-                    if (!qGuiApp->focusWindow())
+                    if (s_exiting || !qGuiApp->focusWindow())
                     {
                         return;
                     }
@@ -179,6 +202,11 @@ void QAEngine::initializeEngine()
 
 void QAEngine::onFocusWindowChanged(QWindow* window)
 {
+    if (s_exiting)
+    {
+        return;
+    }
+
     qCDebug(categoryEngine) << "focusWindowChanged" << window << "appName"
                             << qApp->arguments().first();
 
@@ -221,9 +249,10 @@ void QAEngine::onFocusWindowChanged(QWindow* window)
                 &QWindow::destroyed,
                 [window]()
                 {
-                    if (!s_exiting)
+                    s_windows.remove(window);
+                    if (s_lastFocusWindow == window)
                     {
-                        s_windows.remove(window);
+                        s_lastFocusWindow = nullptr;
                     }
                 });
         QTimer::singleShot(0, platform, &IEnginePlatform::initialize);
@@ -261,7 +290,10 @@ void QAEngine::clientLost(ITransportClient* client)
     if (client == m_analyzeSocket) {
         for (auto platform : s_windows)
         {
-            platform->stopAnalyze();
+            if (platform)
+            {
+                platform->stopAnalyze();
+            }
         }
 
         m_analyzeActive = false;
@@ -547,10 +579,23 @@ bool QAEngine::metaInvokeRet(QObject* object,
 
 void QAEngine::addItem(QObject* o)
 {
+    if (s_exiting)
+    {
+        return;
+    }
     if (auto platform = getPlatform(true))
     {
         platform->addItem(o);
     }
+}
+
+bool QAEngine::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::Quit)
+    {
+        beginExit();
+    }
+    return QObject::eventFilter(watched, event);
 }
 
 void QAEngine::removeItem(QObject* o)
@@ -571,7 +616,18 @@ void QAEngine::removeItem(QObject* o)
     }
     if (s_lastFocusWindow == o)
     {
-        s_lastFocusWindow = qGuiApp->topLevelWindows().first();
+        s_lastFocusWindow = nullptr;
+        // ~QWindow already unregistered this window; the list can be empty
+        // (last window / engine teardown). QList::first() asserts in Debug.
+        const QWindowList windows = qGuiApp ? qGuiApp->topLevelWindows() : QWindowList{};
+        for (QWindow* w : windows)
+        {
+            if (w && w != o)
+            {
+                s_lastFocusWindow = w;
+                break;
+            }
+        }
     }
 }
 

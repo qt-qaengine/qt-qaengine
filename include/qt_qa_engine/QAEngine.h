@@ -52,6 +52,15 @@ private slots:
 
 private:
     explicit QAEngine(QObject* parent = nullptr);
+    IEnginePlatform* ensurePlatform(QWindow* window);
+    QWindow* selectedWindow() const;
+    static QString windowHandleFor(QWindow* window);
+    QWindow* windowFromHandle(const QString& handle) const;
+    static void socketReply(ITransportClient* socket, const QVariant& value, int status = 0);
+    bool processWindowCommand(ITransportClient* socket,
+                              const QString& action,
+                              const QVariantList& params);
+
     ITransportServer* m_socketServer = nullptr;
 
     bool m_analyzeActive = false;

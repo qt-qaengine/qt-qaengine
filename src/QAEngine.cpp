@@ -21,16 +21,16 @@
 #include <QEvent>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QMetaMethod>
 #include <QPointer>
 #include <QProcessEnvironment>
 #include <QTcpSocket>
 #include <QTimer>
 #include <QWindow>
-
-#include <QGuiApplication>
 
 #include <QLoggingCategory>
 
@@ -53,6 +53,11 @@ bool s_exiting = false;
 
 QHash<QWindow*, QPointer<IEnginePlatform>> s_windows;
 QPointer<QWindow> s_lastFocusWindow;
+// Sticky W3C target; null = follow focus (s_lastFocusWindow).
+QPointer<QWindow> s_selectedWindow;
+
+// MJSONWP / Appium status for NoSuchWindowError
+constexpr int kStatusNoSuchWindow = 23;
 
 void beginExit()
 {
@@ -73,6 +78,19 @@ inline QGenericArgument qVariantToArgument(const QVariant& variant)
         return QGenericArgument(variant.typeName(), variant.constData());
     }
     return QGenericArgument();
+}
+
+void clearWindowIfMatch(QWindow* window)
+{
+    s_windows.remove(window);
+    if (s_lastFocusWindow == window)
+    {
+        s_lastFocusWindow = nullptr;
+    }
+    if (s_selectedWindow == window)
+    {
+        s_selectedWindow = nullptr;
+    }
 }
 
 } // namespace
@@ -102,13 +120,113 @@ void QAEngine::objectRemoved(QObject* o)
     s_instance->removeItem(o);
 }
 
-IEnginePlatform* QAEngine::getPlatform(bool silent)
+QWindow* QAEngine::selectedWindow() const
 {
-    if (!s_lastFocusWindow)
+    if (s_selectedWindow)
+    {
+        return s_selectedWindow;
+    }
+    return s_lastFocusWindow;
+}
+
+QString QAEngine::windowHandleFor(QWindow* window)
+{
+    if (!window)
+    {
+        return QString();
+    }
+    return QString::number(quintptr(window), 16);
+}
+
+QWindow* QAEngine::windowFromHandle(const QString& handle) const
+{
+    if (handle.isEmpty())
     {
         return nullptr;
     }
-    const auto platform = s_windows.value(s_lastFocusWindow);
+    bool ok = false;
+    const quintptr ptr = handle.toULongLong(&ok, 16);
+    if (!ok || !ptr)
+    {
+        return nullptr;
+    }
+    for (QWindow* w : qGuiApp->topLevelWindows())
+    {
+        if (quintptr(w) == ptr)
+        {
+            return w;
+        }
+    }
+    return nullptr;
+}
+
+void QAEngine::socketReply(ITransportClient* socket, const QVariant& value, int status)
+{
+    QJsonObject reply;
+    reply.insert(QStringLiteral("status"), status);
+    reply.insert(QStringLiteral("value"), QJsonValue::fromVariant(value));
+    const QByteArray data = QJsonDocument(reply).toJson(QJsonDocument::Compact);
+    socket->write(data);
+    socket->flush();
+}
+
+IEnginePlatform* QAEngine::ensurePlatform(QWindow* window)
+{
+    if (s_exiting || !window)
+    {
+        return nullptr;
+    }
+
+    if (s_windows.contains(window))
+    {
+        return s_windows.value(window);
+    }
+
+    IEnginePlatform* platform = nullptr;
+#if defined(MO_USE_QUICK)
+    if (qobject_cast<QQuickWindow*>(window))
+    {
+        platform = new QuickEnginePlatform(window);
+    }
+#endif
+
+#if defined(MO_USE_QWIDGETS)
+    if (!platform)
+    {
+        platform = new WidgetsEnginePlatform(window);
+    }
+#endif
+    if (!platform)
+    {
+        qWarning() << Q_FUNC_INFO << "Can't determine platform";
+        return nullptr;
+    }
+    connect(platform, &IEnginePlatform::ready, this, &QAEngine::onPlatformReady);
+    connect(qGuiApp, &QGuiApplication::focusWindowChanged, platform, &IEnginePlatform::focusWindowChanged);
+    connect(window,
+            &QWindow::destroyed,
+            [window]()
+            {
+                clearWindowIfMatch(window);
+            });
+    QTimer::singleShot(0, platform, &IEnginePlatform::initialize);
+
+    if (m_analyzeActive)
+        platform->startAnalyze(m_analyzeSocket);
+
+    qDebug() << "!!! new platform !!!" << platform << window;
+    s_windows.insert(window, platform);
+    return platform;
+}
+
+IEnginePlatform* QAEngine::getPlatform(bool silent)
+{
+    QWindow* window = selectedWindow();
+    if (!window)
+    {
+        return nullptr;
+    }
+    const auto platform = s_windows.value(window);
     if (platform)
     {
         return platform;
@@ -117,8 +235,7 @@ IEnginePlatform* QAEngine::getPlatform(bool silent)
     {
         if (!silent)
         {
-            qCWarning(categoryEngine)
-                << Q_FUNC_INFO << "No platform for window:" << s_lastFocusWindow;
+            qCWarning(categoryEngine) << Q_FUNC_INFO << "No platform for window:" << window;
         }
     }
     return nullptr;
@@ -222,46 +339,9 @@ void QAEngine::onFocusWindowChanged(QWindow* window)
         return;
     }
 
-    if (!s_windows.contains(window))
+    if (!ensurePlatform(window))
     {
-        IEnginePlatform* platform = nullptr;
-#if defined(MO_USE_QUICK)
-        if (qobject_cast<QQuickWindow*>(window))
-        {
-            platform = new QuickEnginePlatform(window);
-        }
-#endif
-
-#if defined(MO_USE_QWIDGETS)
-        if (!platform)
-        {
-            platform = new WidgetsEnginePlatform(window);
-        }
-#endif
-        if (!platform)
-        {
-            qWarning() << Q_FUNC_INFO << "Can't determine platform";
-            return;
-        }
-        connect(platform, &IEnginePlatform::ready, this, &QAEngine::onPlatformReady);
-        connect(qGuiApp, &QGuiApplication::focusWindowChanged, platform, &IEnginePlatform::focusWindowChanged);
-        connect(window,
-                &QWindow::destroyed,
-                [window]()
-                {
-                    s_windows.remove(window);
-                    if (s_lastFocusWindow == window)
-                    {
-                        s_lastFocusWindow = nullptr;
-                    }
-                });
-        QTimer::singleShot(0, platform, &IEnginePlatform::initialize);
-
-        if (m_analyzeActive)
-            platform->startAnalyze(m_analyzeSocket);
-
-        qDebug() << "!!! new platform !!!" << platform << window;
-        s_windows.insert(window, platform);
+        return;
     }
 
     s_lastFocusWindow = window;
@@ -614,6 +694,10 @@ void QAEngine::removeItem(QObject* o)
             platform->removeItem(o);
         }
     }
+    if (s_selectedWindow == o)
+    {
+        s_selectedWindow = nullptr;
+    }
     if (s_lastFocusWindow == o)
     {
         s_lastFocusWindow = nullptr;
@@ -674,10 +758,86 @@ void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
     processAppiumCommand(socket, action, params);
 }
 
+bool QAEngine::processWindowCommand(ITransportClient* socket,
+                                    const QString& action,
+                                    const QVariantList& params)
+{
+    if (action == QLatin1String("getWindowHandles"))
+    {
+        QStringList handles;
+        for (QWindow* w : qGuiApp->topLevelWindows())
+        {
+            if (!w)
+            {
+                continue;
+            }
+            ensurePlatform(w);
+            handles.append(windowHandleFor(w));
+        }
+        socketReply(socket, handles);
+        return true;
+    }
+
+    if (action == QLatin1String("getWindowHandle"))
+    {
+        QWindow* window = selectedWindow();
+        if (!window)
+        {
+            socketReply(socket, QStringLiteral("no such window"), kStatusNoSuchWindow);
+            return true;
+        }
+        ensurePlatform(window);
+        socketReply(socket, windowHandleFor(window));
+        return true;
+    }
+
+    if (action == QLatin1String("setWindow"))
+    {
+        // Appium makeArgs yields [name, handle]; either may be empty/duplicate.
+        QString handle;
+        if (params.size() >= 2 && !params.at(1).toString().isEmpty())
+        {
+            handle = params.at(1).toString();
+        }
+        else if (!params.isEmpty())
+        {
+            handle = params.at(0).toString();
+        }
+
+        QWindow* window = windowFromHandle(handle);
+        if (!window)
+        {
+            socketReply(socket, QStringLiteral("no such window"), kStatusNoSuchWindow);
+            return true;
+        }
+
+        if (!ensurePlatform(window))
+        {
+            socketReply(socket, QStringLiteral("no such window"), kStatusNoSuchWindow);
+            return true;
+        }
+
+        s_selectedWindow = window;
+        s_lastFocusWindow = window;
+        window->raise();
+        window->requestActivate();
+
+        socketReply(socket, QString());
+        return true;
+    }
+
+    return false;
+}
+
 bool QAEngine::processAppiumCommand(ITransportClient* socket,
                                     const QString& action,
                                     const QVariantList& params)
 {
+    if (processWindowCommand(socket, action, params))
+    {
+        return true;
+    }
+
     const QString methodName = QStringLiteral("%1Command").arg(action);
     qCDebug(categoryEngine) << Q_FUNC_INFO << socket << methodName << params;
 
@@ -696,14 +856,7 @@ bool QAEngine::processAppiumCommand(ITransportClient* socket,
     }
     else
     {
-        QJsonObject reply;
-        reply.insert(QStringLiteral("status"), 1);
-        reply.insert(QStringLiteral("value"), QStringLiteral("no platform!"));
-
-        const QByteArray data = QJsonDocument(reply).toJson(QJsonDocument::Compact);
-
-        socket->write(data);
-        socket->flush();
+        socketReply(socket, QStringLiteral("no platform!"), 1);
     }
 
     return result;

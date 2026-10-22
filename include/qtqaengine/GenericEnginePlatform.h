@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
 #pragma once
 
-#include <qt_qa_engine/IEnginePlatform.h>
+#include <qtqaengine/IEnginePlatform.h>
 
 #include <QPointer>
 

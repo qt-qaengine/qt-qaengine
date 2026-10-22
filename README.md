@@ -1,236 +1,133 @@
-# qt_qa_engine
+# qt-qaengine
 
-## Quick Engine specific functions
+In-process automation library for Qt applications. It runs inside the application under test and exposes the live object tree over a TCP socket. It is not an official Qt module. The name is not related to [qt/qtqa](https://github.com/qt/qtqa).
 
-### app:waitForPropertyChange
+Use it when a test or a tool must drive a Qt Quick or Qt Widgets interface from outside the process. The library stays in the process under test. It is not a component to ship inside a product.
 
-synchronously wait for element property value change
+## Projects
 
-Usage:
+| Project | Role |
+| --- | --- |
+| [qt-qaengine](https://github.com/CODeRUS/qt-qaengine) | This library. Listens on the socket. |
+| [qt-qaengine-inspector](https://github.com/CODeRUS/qt-qaengine-inspector) | Desktop inspector for the live object tree. |
+| [qt-qaengine-driver](https://github.com/CODeRUS/qt-qaengine-driver) | Appium 2 driver and MCP server. |
 
-`driver.execute_script("app:waitForPropertyChange", "ContextMenu_0x12345678", "opened", true, 10000)`
+These three speak one protocol.
 
-`"ContextMenu_0x12345678"` is element.id, you should find element before using this method
+## How it runs
 
-You can use None as property value to wait for any property change, or exact value to watch for.
+`src/loader.cpp` starts the engine when the shared library is loaded into a `QGuiApplication`. On Unix the library registers a Qt startup hook, so it can be loaded before the application object exists. On Windows the static initializer starts the engine only if a `QGuiApplication` already exists when the DLL is loaded.
 
-10000 - is timeout to wait for change or continue anyway
+Once started, the library listens for newline-delimited JSON. The default port is **8900**. The first client frame must be a protocol hello. Any other first frame closes the socket. The wire format is [docs/protocol.md](docs/protocol.md).
 
-### touch:pressAndHold (deprecated, use TouchAction instead)
+```json
+{"cmd":"hello","protocol":1}
+```
 
-perform press and hold touch action on choosen coordinates
+```json
+{"cmd":"hello","protocol":1,"product":"qt-qaengine"}
+```
 
-Usage:
+Later frames are actions:
 
-`driver.execute_script("touch:pressAndHold", 20, 40)`
+```json
+{"cmd":"action","action":"initialize","params":[]}
+```
 
-### touch:mouseSwipe (deprecated, use TouchAction instead)
+A reply uses `status` and `value`. `status` 0 means success. `initialize` needs a Qt Quick or Qt Widgets window. Without one the engine answers `no platform!`.
 
-perform mouse swipe touch action from one point to another
+Qt Quick support is compiled in when Qt Quick is found. Qt Widgets support is off unless you pass `-DQA_ENGINE_WITH_WIDGETS=ON`.
 
-Usage:
+## Features
 
-`driver.execute_script("touch:mouseSwipe", 20, 40, 60, 80)`
+After `initialize`, clients send `{"cmd":"action","action":"<name>","params":[...]}`. [qt-qaengine-inspector](https://github.com/CODeRUS/qt-qaengine-inspector) and [qt-qaengine-driver](https://github.com/CODeRUS/qt-qaengine-driver) use these actions. The socket is plain TCP, so a client on another machine uses the host and `QTQAENGINE_PORT`.
 
-### touch:mouseDrag (deprecated, use TouchAction instead)
+**Find a Qt object.** `findElement` and `findElements` take a strategy and a selector. Built-in strategies are `objectname`, `objectid`, `classname`, `id`, `name`, `xpath`, `parent`, and `root`. `name` matches visible text. A selector wrapped in `*` is a partial text match. `parent` takes a depth. `root` with an empty selector or `window` is the window. Any other strategy is the name of a `QObject` property. `findElementFromElement` searches under an object you already have.
 
-perform mouse drag touch action from one point to another
+**Read and change it.** `getText` reads the text. `getAttribute` reads a property such as `objectName`, `enabled`, or `visible`. `click` activates the object. `setValue` and `clear` edit a text field.
 
-Usage:
+**Take a picture.** `getScreenshot` returns a PNG of the window, base64-encoded. `getElementScreenshot` does the same for one object. `getWindowRect` returns the window geometry.
 
-`driver.execute_script("touch:mouseDrag", 20, 40, 60, 80)`
+**Read the tree.** `getPageSource` returns the object tree as XML, including `objectName`. This is the same tree the inspector shows after Dump tree.
 
-### window:frameSize
+**Pick a window.** `getWindowHandles` lists the windows. `setWindow` selects the one later actions use.
 
-returns size of window frame. example output: `{'bottom': 1, 'left': 1, 'right': 1, 'top': 31}`
+## Requirements
 
-Usage:
+- CMake 3.16 or newer
+- Qt 5 or Qt 6 (Core, Gui, Network). Qt 6 uses C++17. Qt 5 uses C++11.
+- Qt Quick, Qml, and Quick Controls 2 when you automate Qt Quick
+- A C++ compiler for the same ABI as that Qt build
 
-`driver.execute_script("window:frameSize")`
+## Build
 
-### app:method
+Single-config generators:
 
-method for controlling QLoggingCategory filterRules
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
 
-Usage:
+Visual Studio and other multi-config generators:
 
-`driver.execute_script("app:setLoggingFilter", "autoqa.qaengine.*.debug=true")`
+```bash
+cmake -S . -B build
+cmake --build build --config Release
+```
 
-### app:installFileLogger
+The DLL has to use the same Qt build and the same Debug or Release runtime as the application that loads it. A Debug DLL imports `Qt6Cored.dll` and will not load into a Release process. Pass that Qt prefix on the first configure. If `build` was already configured against another Qt, delete `build` and configure again.
 
-settings capturing logs to local file
+Windows, Visual Studio 2022 (toolset v143), Qt 6.11.1, Debug:
 
-Usage:
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -T v143 -DCMAKE_PREFIX_PATH="C:/Qt/6.11.1/msvc2022_64"
+cmake --build build --config Debug
+```
 
-`driver.execute_script("app:installFileLogger", "/home/user/myapp.log")`
+Release is the same configure and `cmake --build build --config Release`. The products are `build/Debug/qtqaengine.dll` and `build/Release/qtqaengine.dll`, each with a matching `qtqaengine.lib`.
 
-### app:method
+Set `QTQAENGINE_PORT` in the application process before the DLL is loaded. The default is 8900.
 
-invoke meta method on element
+Widgets backend:
 
-Usage:
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DQA_ENGINE_WITH_WIDGETS=ON
+```
 
-`driver.execute_script("app:method", "MyItem_0x12345678", "myFunction", ["some", "args", 15])`
+The shared library is `libqtqaengine.so` on Unix and `qtqaengine.dll` (with `qtqaengine.lib`) on Windows. Public headers are under `include/qtqaengine/`. The installed CMake package is `qtqaengine`, target `QtQaEngine::QtQaEngineLib`.
 
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
+```cmake
+find_package(qtqaengine REQUIRED)
+target_link_libraries(myapp PRIVATE QtQaEngine::QtQaEngineLib)
+```
 
-### app:method:void
+```cpp
+#include <qtqaengine/QtQaEngine.h>
+```
 
-invoke meta method on element, same as app:method, but for functions with void return
+You do not need to call `QtQaEngine::instance()` yourself when the loader runs. The public entry points are `QtQaEngine::instance()`, `initializeSocket()`, and `initializeEngine()`.
 
-Usage:
+## Configuration
 
-`driver.execute_script("app:method:void", "MyItem_0x12345678", "myFunction", ["some", "args", 15])`
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `QTQAENGINE_PORT` | `8900` | TCP port the application listens on. |
+| `QTQAENGINE_FILTER_RULES` | engine debug on, other `qtqaengine.*` categories off | Qt logging rules. Categories use the `qtqaengine` prefix. |
 
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
+## Clients
 
-### app:method:type
+Point [qt-qaengine-inspector](https://github.com/CODeRUS/qt-qaengine-inspector) or [qt-qaengine-driver](https://github.com/CODeRUS/qt-qaengine-driver) at the host and port of the process that has this library loaded. Both clients send the hello frame themselves. They do not inject this DLL and they do not start the application.
 
-invoke meta method on element, same as app:method, but 3rd parameter is for return type name
+The driver repository builds the Appium 2 driver and the MCP server. Install steps, including `appium driver install --source=local` and a Cursor `mcp.json` entry for `node build/mcp.js`, are in that repository's README. The MCP `QTQAENGINE_PORT` and the Appium `qtqaenginePort` capability must be the port this process is listening on.
 
-Usage:
+## License
 
-`driver.execute_script("app:method:type", "MyItem_0x12345678", "myFunction", "QString", ["some", "args", 15])`
+Noncommercial use is under [PolyForm Noncommercial 1.0.0](LICENSE).
 
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
+[OPEN_SOURCE_GRANT](OPEN_SOURCE_GRANT) is a separate permission. It lets you install, copy, and run this software to develop and test a program that is publicly available under an OSI-approved license or an FSF free-software license. A company may use that permission. It does not cover a proprietary program, including a proprietary program in the same repository or the same CI job. It does not allow shipping this software inside a product, and it does not allow relicensing it under the other program's license.
 
-### app:js
+Copyright (c) 2026 Andrei Kozhevnikov. The required notice is in [NOTICE](NOTICE).
 
-execute js code in element context
+## Commercial Licensing
 
-Usage:
-
-`driver.execute_script("app:js", "MyItem_0x12345678", "function() { return "hello!"; }"`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:setAttribute
-
-set attribute value in element
-
-Usage:
-
-`driver.execute_script("app:setAttribute", "MyItem_0x12345678", "attribute_name", "value")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-
-## Qt Widgets specific execute_script methods list
-
-### app:dumpInView
-
-List elements in view
-
-Usage:
-
-`driver.execute_script("app:dumpInView", "MyItem_0x12345678")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:posInView
-
-Returns center coordinates of element item in view
-
-Usage:
-
-`driver.execute_script("app:posInView", "MyItem_0x12345678", "ElementName")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:clickInView
-
-Click center coordinates of element item in view
-
-Usage:
-
-`driver.execute_script("app:clickInView", "MyItem_0x12345678", "ElementName")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:scrollInView
-
-Scroll view to show element
-
-Usage:
-
-`driver.execute_script("app:scrollInView", "MyItem_0x12345678", "ElementName")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:dumpInMenu
-
-List all menu elements
-
-Usage:
-
-`driver.execute_script("app:dumpInMenu")`
-
-### app:triggerInMenu
-
-Trigger menu item
-
-Usage:
-
-`driver.execute_script("app:triggerInMenu", "MenuItemName")`
-
-### app:dumpInComboBox
-
-List elements in ComboBox
-
-Usage:
-
-`driver.execute_script("app:dumpInComboBox", "MyItem_0x12345678")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:activateInComboBox
-
-Activates ComboBox element
-
-Usage:
-
-`driver.execute_script("app:activateInComboBox", "MyItem_0x12345678", "ElementName")`
-
-or by index (starts from 0)
-
-`driver.execute_script("app:activateInComboBox", "MyItem_0x12345678", 1)`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:dumpInTabBar
-
-List elements in TabBar
-
-Usage:
-
-`driver.execute_script("app:dumpInTabBar", "MyItem_0x12345678")`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:posInTabBar
-
-Returns center coordinates of element item in TabBar
-
-Usage:
-
-`driver.execute_script("app:posInTabBar", "MyItem_0x12345678", "ElementName")`
-
-or by index (starts from 0)
-
-`driver.execute_script("app:posInTabBar", "MyItem_0x12345678", 1`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
-
-### app:activateInTabBar
-
-Activates TabBar element
-
-Usage:
-
-`driver.execute_script("app:activateInTabBar", "MyItem_0x12345678", "ElementName")`
-
-or by index (starts from 0)
-
-`driver.execute_script("app:activateInTabBar", "MyItem_0x12345678", 1)`
-
-`"MyItem_0x12345678"` is element.id, you should find element before using this method
+Using this library in commercial products requires a separate license. Contact me at [coderus@duck.com](mailto:coderus@duck.com) and on Telegram at [https://t.me/icoderus](https://t.me/icoderus) to discuss pricing and terms. I also provide paid services for integrating automated tests into your infrastructure.

@@ -1,8 +1,11 @@
-#include <qt_qa_engine/GenericEnginePlatform.h>
-#include <qt_qa_engine/ITransportClient.h>
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAKeyMouseEngine.h>
-#include <qt_qa_engine/QAPendingEvent.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/GenericEnginePlatform.h>
+#include <qtqaengine/ITransportClient.h>
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAKeyMouseEngine.h>
+#include <qtqaengine/QAPendingEvent.h>
 
 #include <QClipboard>
 #include <QDebug>
@@ -39,9 +42,9 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryGenericEnginePlatform, "autoqa.qaengine.platform.generic", QtWarningMsg)
-Q_LOGGING_CATEGORY(categoryGenericEnginePlatformFind, "autoqa.qaengine.platform.generic.find", QtWarningMsg)
-Q_LOGGING_CATEGORY(categoryGenericEnginePlatformRaw, "autoqa.qaengine.platform.generic.raw", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryGenericEnginePlatform, "qtqaengine.platform.generic", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryGenericEnginePlatformFind, "qtqaengine.platform.generic.find", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryGenericEnginePlatformRaw, "qtqaengine.platform.generic.raw", QtWarningMsg)
 
 bool variantCompare(const QVariant &lhs, const QVariant &rhs)
 {
@@ -218,7 +221,7 @@ void GenericEnginePlatform::findElement(ITransportClient* socket,
     QString fixStrategy = strategy;
     fixStrategy = fixStrategy.remove(QChar(u' ')).toLower();
     const QString methodName = QStringLiteral("findStrategy_%1").arg(fixStrategy);
-    if (!QAEngine::metaInvoke(
+    if (!QtQaEngine::metaInvoke(
             socket, this, methodName, {selector, multiple, QVariant::fromValue(item)}))
     {
         findByProperty(socket, strategy, selector, multiple, item);
@@ -1304,7 +1307,7 @@ void GenericEnginePlatform::execute(ITransportClient* socket,
                                     const QVariantList& params)
 {
     bool handled = false;
-    bool success = QAEngine::metaInvoke(socket, this, methodName, params, &handled);
+    bool success = QtQaEngine::metaInvoke(socket, this, methodName, params, &handled);
 
     if (!handled || !success)
     {
@@ -1517,10 +1520,10 @@ void GenericEnginePlatform::activateAppCommand(ITransportClient* socket, const Q
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << appName;
 
-    if (appName != QAEngine::processName())
+    if (appName != QtQaEngine::processName())
     {
         qCWarning(categoryGenericEnginePlatform)
-            << Q_FUNC_INFO << appName << "is not" << QAEngine::processName();
+            << Q_FUNC_INFO << appName << "is not" << QtQaEngine::processName();
         socketReply(socket, QString(), 1);
         return;
     }
@@ -1542,10 +1545,10 @@ void GenericEnginePlatform::closeAppCommand(ITransportClient* socket, const QStr
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << appName;
 
-    if (appName != QAEngine::processName())
+    if (appName != QtQaEngine::processName())
     {
         qCWarning(categoryGenericEnginePlatform)
-            << Q_FUNC_INFO << appName << "is not" << QAEngine::processName();
+            << Q_FUNC_INFO << appName << "is not" << QtQaEngine::processName();
         socketReply(socket, QString(), 1);
         return;
     }
@@ -1567,10 +1570,10 @@ void GenericEnginePlatform::queryAppStateCommand(ITransportClient* socket, const
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << appName;
 
-    if (appName != QAEngine::processName())
+    if (appName != QtQaEngine::processName())
     {
         qCWarning(categoryGenericEnginePlatform)
-            << Q_FUNC_INFO << appName << "is not" << QAEngine::processName();
+            << Q_FUNC_INFO << appName << "is not" << QtQaEngine::processName();
         socketReply(socket, QString(), 1);
         return;
     }
@@ -2364,10 +2367,10 @@ void GenericEnginePlatform::executeCommand_activateApp(ITransportClient *socket,
 {
     qCDebug(categoryGenericEnginePlatform) << Q_FUNC_INFO << socket << appName;
 
-    // if (appName != QAEngine::processName())
+    // if (appName != QtQaEngine::processName())
     // {
     //     qCWarning(categoryGenericEnginePlatform)
-    //     << Q_FUNC_INFO << appName << "is not" << QAEngine::processName();
+    //     << Q_FUNC_INFO << appName << "is not" << QtQaEngine::processName();
     //     socketReply(socket, QString(), 1);
     //     return;
     // }
@@ -2418,7 +2421,7 @@ void GenericEnginePlatform::executeCommand_app_method(ITransportClient* socket,
 
     QVariant reply;
     bool implemented = false;
-    bool result = QAEngine::metaInvokeRet(item, method, params, &implemented, &reply);
+    bool result = QtQaEngine::metaInvokeRet(item, method, params, &implemented, &reply);
 
     qCDebug(categoryGenericEnginePlatform)
         << Q_FUNC_INFO << "app:method result:" << (result ? "true" : "false");

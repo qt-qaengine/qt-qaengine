@@ -1,6 +1,9 @@
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAEngineSocketClient.h>
-#include <qt_qa_engine/TCPSocketClient.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAEngineSocketClient.h>
+#include <qtqaengine/TCPSocketClient.h>
 
 #include <QDebug>
 #include <QFileInfo>
@@ -13,7 +16,7 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categorySocketClient, "autoqa.qaengine.socket", QtWarningMsg)
+Q_LOGGING_CATEGORY(categorySocketClient, "qtqaengine.socket", QtWarningMsg)
 
 QAEngineSocketClient::QAEngineSocketClient(QObject* parent)
     : QObject(parent)
@@ -25,7 +28,7 @@ void QAEngineSocketClient::connectToBridge()
     qCDebug(categorySocketClient) << Q_FUNC_INFO;
 
     auto socket = new QTcpSocket(this);
-    socket->connectToHost(QHostAddress(QHostAddress::LocalHost), 8888);
+    socket->connectToHost(QHostAddress(QHostAddress::LocalHost), 8900);
     m_client = new TCPSocketClient(socket, this);
 
     if (!m_client->isConnected())
@@ -36,7 +39,7 @@ void QAEngineSocketClient::connectToBridge()
 
     QJsonObject root;
     QJsonObject app;
-    app.insert(QStringLiteral("appName"), QAEngine::processName());
+    app.insert(QStringLiteral("appName"), QtQaEngine::processName());
 
     root.insert(QStringLiteral("appConnect"), app);
 
@@ -74,7 +77,7 @@ void QAEngineSocketClient::onConnected()
 
     QJsonObject root;
     QJsonObject app;
-    app.insert(QStringLiteral("appName"), QAEngine::processName());
+    app.insert(QStringLiteral("appName"), QtQaEngine::processName());
 
     root.insert(QStringLiteral("appConnect"), app);
 

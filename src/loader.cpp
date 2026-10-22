@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
 #include <QGuiApplication>
 #include <QTimer>
 
-#include <qt_qa_engine/QAEngine.h>
+#include <qtqaengine/QtQaEngine.h>
 
 #ifdef Q_OS_UNIX
 #include <private/qhooks_p.h>
@@ -48,9 +51,9 @@ static void qtStartup()
                        qApp,
                        []()
                        {
-                           QAEngine* engine = QAEngine::instance();
-                           QTimer::singleShot(0, engine, &QAEngine::initializeSocket);
-                           QTimer::singleShot(0, engine, &QAEngine::initializeEngine);
+                           QtQaEngine* engine = QtQaEngine::instance();
+                           QTimer::singleShot(0, engine, &QtQaEngine::initializeSocket);
+                           QTimer::singleShot(0, engine, &QtQaEngine::initializeEngine);
                        });
 }
 

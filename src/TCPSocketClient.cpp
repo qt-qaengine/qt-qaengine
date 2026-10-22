@@ -1,4 +1,7 @@
-#include <qt_qa_engine/TCPSocketClient.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/TCPSocketClient.h>
 
 #include <QDebug>
 #include <QTcpSocket>

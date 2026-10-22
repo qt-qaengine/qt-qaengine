@@ -1,17 +1,20 @@
-#include <qt_qa_engine/IEnginePlatform.h>
-#include <qt_qa_engine/ITransportClient.h>
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAEngineSocketClient.h>
-#include <qt_qa_engine/TCPSocketServer.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/IEnginePlatform.h>
+#include <qtqaengine/ITransportClient.h>
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAEngineSocketClient.h>
+#include <qtqaengine/TCPSocketServer.h>
 
 #if defined(MO_USE_QUICK)
 #include <QQuickWindow>
-#include <qt_qa_engine/QuickEnginePlatform.h>
+#include <qtqaengine/QuickEnginePlatform.h>
 #endif
 
 #if defined(MO_USE_QWIDGETS)
 #include <QApplication>
-#include <qt_qa_engine/WidgetsEnginePlatform.h>
+#include <qtqaengine/WidgetsEnginePlatform.h>
 #endif
 
 #include <QCoreApplication>
@@ -40,15 +43,15 @@
 
 #include <array>
 
-Q_LOGGING_CATEGORY(categoryEngine, "autoqa.qaengine.engine", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryEngine, "qtqaengine.engine", QtWarningMsg)
 
 namespace
 {
 
 bool s_engineLoaded = false;
-QAEngine* s_instance = nullptr;
+QtQaEngine* s_instance = nullptr;
 
-QString s_processName = "qaengine";
+QString s_processName = "qtqaengine";
 bool s_exiting = false;
 
 QHash<QWindow*, QPointer<IEnginePlatform>> s_windows;
@@ -95,12 +98,12 @@ void clearWindowIfMatch(QWindow* window)
 
 } // namespace
 
-bool QAEngine::isLoaded()
+bool QtQaEngine::isLoaded()
 {
     return s_instance;
 }
 
-void QAEngine::objectCreated(QObject* o)
+void QtQaEngine::objectCreated(QObject* o)
 {
     if (s_exiting || !s_instance)
     {
@@ -110,7 +113,7 @@ void QAEngine::objectCreated(QObject* o)
     s_instance->addItem(o);
 }
 
-void QAEngine::objectRemoved(QObject* o)
+void QtQaEngine::objectRemoved(QObject* o)
 {
     if (s_exiting || !s_instance)
     {
@@ -120,7 +123,7 @@ void QAEngine::objectRemoved(QObject* o)
     s_instance->removeItem(o);
 }
 
-QWindow* QAEngine::selectedWindow() const
+QWindow* QtQaEngine::selectedWindow() const
 {
     if (s_selectedWindow)
     {
@@ -129,7 +132,7 @@ QWindow* QAEngine::selectedWindow() const
     return s_lastFocusWindow;
 }
 
-QString QAEngine::windowHandleFor(QWindow* window)
+QString QtQaEngine::windowHandleFor(QWindow* window)
 {
     if (!window)
     {
@@ -138,7 +141,7 @@ QString QAEngine::windowHandleFor(QWindow* window)
     return QString::number(quintptr(window), 16);
 }
 
-QWindow* QAEngine::windowFromHandle(const QString& handle) const
+QWindow* QtQaEngine::windowFromHandle(const QString& handle) const
 {
     if (handle.isEmpty())
     {
@@ -160,7 +163,7 @@ QWindow* QAEngine::windowFromHandle(const QString& handle) const
     return nullptr;
 }
 
-void QAEngine::socketReply(ITransportClient* socket, const QVariant& value, int status)
+void QtQaEngine::socketReply(ITransportClient* socket, const QVariant& value, int status)
 {
     QJsonObject reply;
     reply.insert(QStringLiteral("status"), status);
@@ -170,7 +173,7 @@ void QAEngine::socketReply(ITransportClient* socket, const QVariant& value, int 
     socket->flush();
 }
 
-IEnginePlatform* QAEngine::ensurePlatform(QWindow* window)
+IEnginePlatform* QtQaEngine::ensurePlatform(QWindow* window)
 {
     if (s_exiting || !window)
     {
@@ -201,7 +204,7 @@ IEnginePlatform* QAEngine::ensurePlatform(QWindow* window)
         qWarning() << Q_FUNC_INFO << "Can't determine platform";
         return nullptr;
     }
-    connect(platform, &IEnginePlatform::ready, this, &QAEngine::onPlatformReady);
+    connect(platform, &IEnginePlatform::ready, this, &QtQaEngine::onPlatformReady);
     connect(qGuiApp, &QGuiApplication::focusWindowChanged, platform, &IEnginePlatform::focusWindowChanged);
     connect(window,
             &QWindow::destroyed,
@@ -219,7 +222,7 @@ IEnginePlatform* QAEngine::ensurePlatform(QWindow* window)
     return platform;
 }
 
-IEnginePlatform* QAEngine::getPlatform(bool silent)
+IEnginePlatform* QtQaEngine::getPlatform(bool silent)
 {
     QWindow* window = selectedWindow();
     if (!window)
@@ -241,7 +244,7 @@ IEnginePlatform* QAEngine::getPlatform(bool silent)
     return nullptr;
 }
 
-void QAEngine::initializeSocket()
+void QtQaEngine::initializeSocket()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     qCDebug(categoryEngine) << Q_FUNC_INFO << Qt::endl
@@ -262,10 +265,10 @@ void QAEngine::initializeSocket()
     m_socketServer->start();
 }
 
-void QAEngine::initializeEngine()
+void QtQaEngine::initializeEngine()
 {
     disconnect(
-        m_socketServer, &ITransportServer::commandReceived, this, &QAEngine::initializeEngine);
+        m_socketServer, &ITransportServer::commandReceived, this, &QtQaEngine::initializeEngine);
 
     if (s_engineLoaded)
     {
@@ -279,8 +282,8 @@ void QAEngine::initializeEngine()
     qCDebug(categoryEngine) << Q_FUNC_INFO << endl;
 #endif
 
-    qtHookData[QHooks::RemoveQObject] = reinterpret_cast<quintptr>(&QAEngine::objectRemoved);
-    qtHookData[QHooks::AddQObject] = reinterpret_cast<quintptr>(&QAEngine::objectCreated);
+    qtHookData[QHooks::RemoveQObject] = reinterpret_cast<quintptr>(&QtQaEngine::objectRemoved);
+    qtHookData[QHooks::AddQObject] = reinterpret_cast<quintptr>(&QtQaEngine::objectCreated);
 
     // Event filter sees QEvent::Quit before aboutToQuit. Chattti's aboutToQuit
     // (destroyQmlEngine) is often connected first, so uninstall hooks here in
@@ -294,7 +297,7 @@ void QAEngine::initializeEngine()
                 beginExit();
             });
 
-    connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &QAEngine::onFocusWindowChanged);
+    connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &QtQaEngine::onFocusWindowChanged);
     if (!qGuiApp->topLevelWindows().isEmpty())
     {
         onFocusWindowChanged(qGuiApp->topLevelWindows().first());
@@ -317,7 +320,7 @@ void QAEngine::initializeEngine()
     }
 }
 
-void QAEngine::onFocusWindowChanged(QWindow* window)
+void QtQaEngine::onFocusWindowChanged(QWindow* window)
 {
     if (s_exiting)
     {
@@ -347,7 +350,7 @@ void QAEngine::onFocusWindowChanged(QWindow* window)
     s_lastFocusWindow = window;
 }
 
-void QAEngine::onPlatformReady()
+void QtQaEngine::onPlatformReady()
 {
 
     IEnginePlatform* platform = qobject_cast<IEnginePlatform*>(sender());
@@ -363,9 +366,11 @@ void QAEngine::onPlatformReady()
                             << platform->rootObject();
 }
 
-void QAEngine::clientLost(ITransportClient* client)
+void QtQaEngine::clientLost(ITransportClient* client)
 {
     qCDebug(categoryEngine) << Q_FUNC_INFO << client;
+
+    m_readyClients.remove(client);
 
     if (client == m_analyzeSocket) {
         for (auto platform : s_windows)
@@ -381,27 +386,27 @@ void QAEngine::clientLost(ITransportClient* client)
     }
 }
 
-QAEngine* QAEngine::instance()
+QtQaEngine* QtQaEngine::instance()
 {
     if (!s_instance)
     {
-        s_instance = new QAEngine(qApp);
+        s_instance = new QtQaEngine(qApp);
     }
     return s_instance;
 }
 
-QAEngine::QAEngine(QObject* parent)
+QtQaEngine::QtQaEngine(QObject* parent)
     : QObject(parent)
 {
-    int port = QProcessEnvironment::systemEnvironment().value("QAENGINE_PORT", "8888").toInt();
-    QString defaultRules = "autoqa.qaengine.*.debug=false\n"
-    //                        "autoqa.qaengine.platform.generic=true\n"
-    //                        "autoqa.qaengine.platform.quick=true\n"
-    //                        "autoqa.qaengine.keymouse=true\n"
-    //                        "autoqa.qaengine.transport.server.debug=true\n";
-                           "autoqa.qaengine.engine.debug=true\n";
-    QString filterRules = QProcessEnvironment::systemEnvironment().value("QAENGINE_FILTER_RULES", defaultRules);
-    qDebug() << "QAEngine port:" << port;
+    int port = QProcessEnvironment::systemEnvironment().value("QTQAENGINE_PORT", "8900").toInt();
+    QString defaultRules = "qtqaengine.*.debug=false\n"
+    //                        "qtqaengine.platform.generic=true\n"
+    //                        "qtqaengine.platform.quick=true\n"
+    //                        "qtqaengine.keymouse=true\n"
+    //                        "qtqaengine.transport.server.debug=true\n";
+                           "qtqaengine.engine.debug=true\n";
+    QString filterRules = QProcessEnvironment::systemEnvironment().value("QTQAENGINE_FILTER_RULES", defaultRules);
+    qDebug() << "QtQaEngine port:" << port;
     m_socketServer = new TCPSocketServer(port, this);
 
     qRegisterMetaType<QTcpSocket*>();
@@ -409,21 +414,21 @@ QAEngine::QAEngine(QObject* parent)
     qRegisterMetaType<ITransportServer*>();
     QLoggingCategory::setFilterRules(filterRules);
 
-    connect(m_socketServer, &ITransportServer::commandReceived, this, &QAEngine::initializeEngine);
-    connect(m_socketServer, &ITransportServer::commandReceived, this, &QAEngine::processCommand);
-    connect(m_socketServer, &ITransportServer::clientLost, this, &QAEngine::clientLost);
+    connect(m_socketServer, &ITransportServer::commandReceived, this, &QtQaEngine::initializeEngine);
+    connect(m_socketServer, &ITransportServer::commandReceived, this, &QtQaEngine::processCommand);
+    connect(m_socketServer, &ITransportServer::clientLost, this, &QtQaEngine::clientLost);
 }
 
-QAEngine::~QAEngine()
+QtQaEngine::~QtQaEngine()
 {
 }
 
-QString QAEngine::processName()
+QString QtQaEngine::processName()
 {
     return s_processName;
 }
 
-bool QAEngine::metaInvoke(ITransportClient* socket,
+bool QtQaEngine::metaInvoke(ITransportClient* socket,
                           QObject* object,
                           const QString& methodName,
                           const QVariantList& params,
@@ -527,7 +532,7 @@ bool QAEngine::metaInvoke(ITransportClient* socket,
 }
 
 
-bool QAEngine::metaInvokeRet(QObject* object,
+bool QtQaEngine::metaInvokeRet(QObject* object,
                              const QString& methodName,
                              const QVariantList& params,
                              bool* implemented,
@@ -657,7 +662,7 @@ bool QAEngine::metaInvokeRet(QObject* object,
     return false;
 }
 
-void QAEngine::addItem(QObject* o)
+void QtQaEngine::addItem(QObject* o)
 {
     if (s_exiting)
     {
@@ -669,7 +674,7 @@ void QAEngine::addItem(QObject* o)
     }
 }
 
-bool QAEngine::eventFilter(QObject* watched, QEvent* event)
+bool QtQaEngine::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::Quit)
     {
@@ -678,7 +683,7 @@ bool QAEngine::eventFilter(QObject* watched, QEvent* event)
     return QObject::eventFilter(watched, event);
 }
 
-void QAEngine::removeItem(QObject* o)
+void QtQaEngine::removeItem(QObject* o)
 {
     if (s_exiting)
     {
@@ -715,7 +720,7 @@ void QAEngine::removeItem(QObject* o)
     }
 }
 
-void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
+void QtQaEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
 {
     qCDebug(categoryEngine) << Q_FUNC_INFO << socket;
     qCDebug(categoryEngine).noquote() << cmd;
@@ -727,14 +732,28 @@ void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
         return;
     }
 
-    auto&& object = json.object();
+    const QJsonObject object = json.object();
+    const QString command = object.value(QStringLiteral("cmd")).toString();
 
-    if (!object.contains(QStringLiteral("cmd")))
+    if (!m_readyClients.contains(socket))
     {
+        if (command == QLatin1String("hello")
+            && object.value(QStringLiteral("protocol")).toInt() == 1)
+        {
+            m_readyClients.insert(socket);
+            QJsonObject reply;
+            reply.insert(QStringLiteral("cmd"), QStringLiteral("hello"));
+            reply.insert(QStringLiteral("protocol"), 1);
+            reply.insert(QStringLiteral("product"), QStringLiteral("qt-qaengine"));
+            socket->write(QJsonDocument(reply).toJson(QJsonDocument::Compact) + '\n');
+            socket->flush();
+            return;
+        }
+        socket->close();
         return;
     }
 
-    if (object.value(QStringLiteral("cmd")).toVariant().toString() != QStringLiteral("action"))
+    if (command != QLatin1String("action"))
     {
         return;
     }
@@ -758,7 +777,7 @@ void QAEngine::processCommand(ITransportClient* socket, const QByteArray& cmd)
     processAppiumCommand(socket, action, params);
 }
 
-bool QAEngine::processWindowCommand(ITransportClient* socket,
+bool QtQaEngine::processWindowCommand(ITransportClient* socket,
                                     const QString& action,
                                     const QVariantList& params)
 {
@@ -804,6 +823,19 @@ bool QAEngine::processWindowCommand(ITransportClient* socket,
             handle = params.at(0).toString();
         }
 
+        // Empty handle drops the sticky target so the next getWindowHandle follows focus.
+        if (handle.isEmpty())
+        {
+            s_selectedWindow = nullptr;
+            QWindow* window = selectedWindow();
+            if (window)
+            {
+                ensurePlatform(window);
+            }
+            socketReply(socket, window ? windowHandleFor(window) : QString());
+            return true;
+        }
+
         QWindow* window = windowFromHandle(handle);
         if (!window)
         {
@@ -829,7 +861,7 @@ bool QAEngine::processWindowCommand(ITransportClient* socket,
     return false;
 }
 
-bool QAEngine::processAppiumCommand(ITransportClient* socket,
+bool QtQaEngine::processAppiumCommand(ITransportClient* socket,
                                     const QString& action,
                                     const QVariantList& params)
 {

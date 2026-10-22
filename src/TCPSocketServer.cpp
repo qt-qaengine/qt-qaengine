@@ -1,5 +1,8 @@
-#include <qt_qa_engine/TCPSocketClient.h>
-#include <qt_qa_engine/TCPSocketServer.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/TCPSocketClient.h>
+#include <qtqaengine/TCPSocketServer.h>
 
 #include <QCoreApplication>
 #include <QTcpServer>
@@ -9,7 +12,7 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryTCPSocketServer, "autoqa.qaengine.transport.server", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryTCPSocketServer, "qtqaengine.transport.server", QtWarningMsg)
 
 TCPSocketServer::TCPSocketServer(quint16 port, QObject* parent)
     : ITransportServer(parent)

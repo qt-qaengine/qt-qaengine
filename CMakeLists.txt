@@ -1,4 +1,6 @@
-# Qt6 requires CMake 3.16 or newer.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
 cmake_minimum_required(VERSION 3.16)
 
 # Load local CMake definitions. Before the project() command strictly!
@@ -10,18 +12,18 @@ elseif (CALLED_FROM_CBE)
     message(FATAL_ERROR "Can't find file ${CMAKE_CURRENT_BINARY_DIR}/local_defs.cmake!")
 endif ()
 
-project (qt_qa_engine LANGUAGES CXX)
+project(qtqaengine VERSION 1.0.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-# Enable widgets backend. Disabled by default, same as in qt_qa_engine.pro.
+# Enable widgets backend. Disabled by default, same as in qtqaengine.pro.
 option(QA_ENGINE_WITH_WIDGETS "Build the QWidgets engine platform" OFF)
 
 set(LIBS "")
 set(LIBS_DEFS "")
 set(LIBS_INCLUDES "")
-# Qt components this build actually uses, re-exported to qt_qa_engineConfig.cmake.
+# Qt components this build actually uses, re-exported to qtqaengineConfig.cmake.
 set(QA_ENGINE_QT_COMPONENTS "")
 set(${PROJECT_NAME}_HEADERS "")
 set(${PROJECT_NAME}_SOURCES "")
@@ -107,7 +109,7 @@ if (QA_ENGINE_HAS_QUICK)
         endif()
     endif()
 
-    list(APPEND ${PROJECT_NAME}_HEADERS include/qt_qa_engine/QuickEnginePlatform.h)
+    list(APPEND ${PROJECT_NAME}_HEADERS include/qtqaengine/QuickEnginePlatform.h)
     list(APPEND ${PROJECT_NAME}_SOURCES src/QuickEnginePlatform.cpp)
 
     if (QT_VERSION_MAJOR GREATER_EQUAL 6)
@@ -121,7 +123,7 @@ if (QA_ENGINE_WITH_WIDGETS)
     list(APPEND LIBS_DEFS MO_USE_QWIDGETS)
     qa_use_qt_module(Widgets PRIVATE)
 
-    list(APPEND ${PROJECT_NAME}_HEADERS include/qt_qa_engine/WidgetsEnginePlatform.h)
+    list(APPEND ${PROJECT_NAME}_HEADERS include/qtqaengine/WidgetsEnginePlatform.h)
     list(APPEND ${PROJECT_NAME}_SOURCES src/WidgetsEnginePlatform.cpp)
 endif()
 
@@ -140,22 +142,22 @@ endif()
 
 list(APPEND
     ${PROJECT_NAME}_HEADERS
-    include/qt_qa_engine/GenericEnginePlatform.h
-    include/qt_qa_engine/ITransportServer.h
-    include/qt_qa_engine/IEnginePlatform.h
-    include/qt_qa_engine/QAEngine.h
-    include/qt_qa_engine/QAKeyMouseEngine.h
-    include/qt_qa_engine/TCPSocketClient.h
-    include/qt_qa_engine/ITransportClient.h
-    include/qt_qa_engine/QAEngineSocketClient.h
-    include/qt_qa_engine/QAPendingEvent.h
-    include/qt_qa_engine/TCPSocketServer.h
+    include/qtqaengine/GenericEnginePlatform.h
+    include/qtqaengine/ITransportServer.h
+    include/qtqaengine/IEnginePlatform.h
+    include/qtqaengine/QtQaEngine.h
+    include/qtqaengine/QAKeyMouseEngine.h
+    include/qtqaengine/TCPSocketClient.h
+    include/qtqaengine/ITransportClient.h
+    include/qtqaengine/QAEngineSocketClient.h
+    include/qtqaengine/QAPendingEvent.h
+    include/qtqaengine/TCPSocketServer.h
 )
 
 list(APPEND
     ${PROJECT_NAME}_SOURCES
     src/GenericEnginePlatform.cpp
-    src/QAEngine.cpp
+    src/QtQaEngine.cpp
     src/QAPendingEvent.cpp
     src/IEnginePlatform.cpp
     src/QAEngineSocketClient.cpp
@@ -178,7 +180,7 @@ add_library (${PROJECT_NAME} SHARED
     ${${PROJECT_NAME}_HEADERS}
 )
 
-# Qt6 requires C++17, Qt5 builds keep the C++11 baseline of qt_qa_engine.pro.
+# Qt6 requires C++17, Qt5 builds keep the C++11 baseline of qtqaengine.pro.
 if (QT_VERSION_MAJOR GREATER_EQUAL 6)
     set(QA_ENGINE_CXX_STANDARD 17)
 else()
@@ -189,7 +191,8 @@ set_target_properties (${PROJECT_NAME} PROPERTIES
     CXX_STANDARD ${QA_ENGINE_CXX_STANDARD}
     CXX_STANDARD_REQUIRED YES
     AUTOMOC ON
-    EXPORT_NAME QAEngineLib
+    EXPORT_NAME QtQaEngineLib
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
 
 target_compile_definitions(${PROJECT_NAME}
@@ -211,7 +214,9 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti -fexceptions -fPIC")
+if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti -fexceptions -fPIC")
+endif()
 
 if (MO_OS_IOS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fembed-bitcode")
@@ -224,7 +229,7 @@ set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
 set(TARGETS_EXPORT_FILE "${TARGETS_EXPORT_NAME}.cmake")
 set(PROJECT_CONFIG "${PROJECT_NAME}Config.cmake")
 set(PROJECT_CONFIG_IN "${PROJECT_CONFIG}.in")
-set(NAMESPACE "AutoQA::")
+set(NAMESPACE "QtQaEngine::")
 set(REQUIRED_QT_VERSION "${QT_VERSION}")
 list(REMOVE_DUPLICATES QA_ENGINE_QT_COMPONENTS)
 string(REPLACE ";" " " QA_ENGINE_QT_COMPONENTS "${QA_ENGINE_QT_COMPONENTS}")

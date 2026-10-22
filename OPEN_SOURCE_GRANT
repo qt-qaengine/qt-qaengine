@@ -1,0 +1,18 @@
+Additional permission for open source development
+
+Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+Andrei Kozhevnikov grants you permission to install, copy, and run
+this software to develop and test a program that is publicly available
+under a license approved by the Open Source Initiative or listed as a
+free software license by the Free Software Foundation. A company may
+use this permission.
+
+This permission covers that development and testing only. It does not
+cover use to develop or test a proprietary program, including a
+proprietary program in the same repository or the same CI job. It does
+not allow distributing this software inside a product. It does not
+allow relicensing this software under the other program's license.
+
+Any other commercial use requires a separate license from
+Andrei Kozhevnikov <coderusinbox@gmail.com>.

@@ -1,7 +1,10 @@
-#include <qt_qa_engine/IEnginePlatform.h>
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAKeyMouseEngine.h>
-#include <qt_qa_engine/QAPendingEvent.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/IEnginePlatform.h>
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAKeyMouseEngine.h>
+#include <qtqaengine/QAPendingEvent.h>
 
 #include <QCoreApplication>
 #include <QKeyEvent>
@@ -24,7 +27,7 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryKeyMouseEngine, "autoqa.qaengine.keymouse", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryKeyMouseEngine, "qtqaengine.keymouse", QtWarningMsg)
 
 namespace
 {
@@ -321,7 +324,7 @@ QAPendingEvent* QAKeyMouseEngine::move(
 void QAKeyMouseEngine::pressEnter()
 {
 #if (!defined(MO_OS_ANDROID) && !defined(MO_OS_IOS))
-    // QAEngine::instance()->getPlatform()->activateWindow();
+    // QtQaEngine::instance()->getPlatform()->activateWindow();
 
     QEventLoop loop;
     QTimer::singleShot(100, &loop, &QEventLoop::quit);
@@ -472,7 +475,7 @@ void QAKeyMouseEngine::onPressed(const QPointF point)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -531,7 +534,7 @@ void QAKeyMouseEngine::onPressed(const QPointF point)
         Qt::MouseButton btn = Qt::LeftButton;
         m_buttons |= btn;
         QMouseEvent me(QEvent::MouseButtonPress, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), btn, m_buttons, m_mods);
@@ -554,7 +557,7 @@ void QAKeyMouseEngine::onMoved(const QPointF point)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -607,7 +610,7 @@ void QAKeyMouseEngine::onMoved(const QPointF point)
     else
     {
         QMouseEvent me(QEvent::MouseMove, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), Qt::LeftButton, m_buttons, m_mods);
@@ -630,7 +633,7 @@ void QAKeyMouseEngine::onReleased(const QPointF point)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -686,7 +689,7 @@ void QAKeyMouseEngine::onReleased(const QPointF point)
         Qt::MouseButton btn = Qt::LeftButton;
         m_buttons &= ~btn;
         QMouseEvent me(QEvent::MouseButtonRelease, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), btn, m_buttons, m_mods);
@@ -737,7 +740,7 @@ void QAKeyMouseEngine::onMousePressed(const QPointF &point, int button)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -804,7 +807,7 @@ void QAKeyMouseEngine::onMousePressed(const QPointF &point, int button)
         }
         m_buttons |= btn;
         QMouseEvent me(QEvent::MouseButtonPress, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), btn, m_buttons, m_mods);
@@ -827,7 +830,7 @@ void QAKeyMouseEngine::onMouseReleased(const QPointF &point, int button)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -890,7 +893,7 @@ void QAKeyMouseEngine::onMouseReleased(const QPointF &point, int button)
         }
         m_buttons &= ~btn;
         QMouseEvent me(QEvent::MouseButtonRelease, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), btn, m_buttons, m_mods);
@@ -913,7 +916,7 @@ void QAKeyMouseEngine::onMouseMoved(const QPointF &point)
         QMutableEventPoint::setPosition(tp, point);
         QMutableEventPoint::setScenePosition(tp, point);
         QMutableEventPoint::setGlobalPosition(tp, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point));
@@ -967,7 +970,7 @@ void QAKeyMouseEngine::onMouseMoved(const QPointF &point)
     else
     {
         QMouseEvent me(QEvent::MouseMove, point, point, ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point), Qt::NoButton, m_buttons, m_mods);
@@ -986,7 +989,7 @@ void QAKeyMouseEngine::onMouseWheeled(const QPointF &delta, const QPointF &point
     else
     {
         QPoint globalPos = ([](const QPointF &pt) -> QPointF {
-            if (auto *platform = QAEngine::instance()->getPlatform(true))
+            if (auto *platform = QtQaEngine::instance()->getPlatform(true))
                 return platform->mapToGlobal(pt);
             return pt;
         })(point).toPoint();
@@ -1112,7 +1115,7 @@ void EventWorker::start()
 
             if (options.contains(QStringLiteral("element")))
             {
-                auto platform = QAEngine::instance()->getPlatform();
+                auto platform = QtQaEngine::instance()->getPlatform();
                 if (auto item =
                         platform->getObject(options.value(QStringLiteral("element")).toString()))
                 {
@@ -1136,7 +1139,7 @@ void EventWorker::start()
 
             if (options.contains(QStringLiteral("element")))
             {
-                auto platform = QAEngine::instance()->getPlatform();
+                auto platform = QtQaEngine::instance()->getPlatform();
                 if (auto item =
                         platform->getObject(options.value(QStringLiteral("element")).toString()))
                 {
@@ -1155,7 +1158,7 @@ void EventWorker::start()
 
             if (options.contains(QStringLiteral("element")))
             {
-                auto platform = QAEngine::instance()->getPlatform();
+                auto platform = QtQaEngine::instance()->getPlatform();
                 if (auto item =
                         platform->getObject(options.value(QStringLiteral("element")).toString()))
                 {
@@ -1188,7 +1191,7 @@ void EventWorker::start()
 
             if (options.contains(QStringLiteral("element")))
             {
-                auto platform = QAEngine::instance()->getPlatform();
+                auto platform = QtQaEngine::instance()->getPlatform();
                 if (auto item =
                         platform->getObject(options.value(QStringLiteral("element")).toString()))
                 {
@@ -1332,7 +1335,7 @@ void EventWorker::startChain()
 
                 if (action.contains(QStringLiteral("origin")))
                 {
-                    auto platform = QAEngine::instance()->getPlatform();
+                    auto platform = QtQaEngine::instance()->getPlatform();
                     const auto& origin = action.value(QStringLiteral("origin"));
                     QString itemId;
                     QVariantMap originMap = origin.toMap();
@@ -1408,11 +1411,11 @@ void EventWorker::startChain()
             const int deltaX = action.value(QStringLiteral("deltaX"), 0).toInt();
             const int deltaY = action.value(QStringLiteral("deltaY"), 0).toInt();
 
-            QObject *item = QAEngine::instance()->getPlatform()->rootObject();
+            QObject *item = QtQaEngine::instance()->getPlatform()->rootObject();
 
             if (origin == QLatin1String("viewport"))
             {
-                QPointF point = QAEngine::instance()->getPlatform()->getAbsGeometry(item).center();
+                QPointF point = QtQaEngine::instance()->getPlatform()->getAbsGeometry(item).center();
                 emit mouseWheeled(QPointF(deltaX, deltaY), point);
             }
             else

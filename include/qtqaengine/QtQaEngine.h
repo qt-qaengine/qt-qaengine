@@ -1,6 +1,10 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
 #pragma once
 
 #include <QObject>
+#include <QSet>
 #include <QVariant>
 
 class QAEngineSocketClient;
@@ -8,17 +12,17 @@ class ITransportClient;
 class ITransportServer;
 class IEnginePlatform;
 class QWindow;
-class QAEngine : public QObject
+class QtQaEngine : public QObject
 {
     Q_OBJECT
 public:
-    static QAEngine* instance();
+    static QtQaEngine* instance();
     static bool isLoaded();
     static void objectCreated(QObject* o);
     static void objectRemoved(QObject* o);
     IEnginePlatform* getPlatform(bool silent = false);
 
-    virtual ~QAEngine();
+    virtual ~QtQaEngine();
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     static QString processName();
@@ -51,7 +55,7 @@ private slots:
     void clientLost(ITransportClient* client);
 
 private:
-    explicit QAEngine(QObject* parent = nullptr);
+    explicit QtQaEngine(QObject* parent = nullptr);
     IEnginePlatform* ensurePlatform(QWindow* window);
     QWindow* selectedWindow() const;
     static QString windowHandleFor(QWindow* window);
@@ -62,6 +66,7 @@ private:
                               const QVariantList& params);
 
     ITransportServer* m_socketServer = nullptr;
+    QSet<ITransportClient*> m_readyClients;
 
     bool m_analyzeActive = false;
     ITransportClient* m_analyzeSocket = nullptr;

@@ -1,7 +1,10 @@
-#include <qt_qa_engine/ITransportClient.h>
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAKeyMouseEngine.h>
-#include <qt_qa_engine/WidgetsEnginePlatform.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/ITransportClient.h>
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAKeyMouseEngine.h>
+#include <qtqaengine/WidgetsEnginePlatform.h>
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -28,8 +31,8 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryWidgetsEnginePlatform, "autoqa.qaengine.platform.widgets", QtWarningMsg)
-Q_LOGGING_CATEGORY(categoryWidgetsEnginePlatformFind, "autoqa.qaengine.platform.widgets.find", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryWidgetsEnginePlatform, "qtqaengine.platform.widgets", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryWidgetsEnginePlatformFind, "qtqaengine.platform.widgets.find", QtWarningMsg)
 
 namespace
 {

@@ -1,7 +1,10 @@
-#include <qt_qa_engine/ITransportClient.h>
-#include <qt_qa_engine/QAEngine.h>
-#include <qt_qa_engine/QAKeyMouseEngine.h>
-#include <qt_qa_engine/QuickEnginePlatform.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/ITransportClient.h>
+#include <qtqaengine/QtQaEngine.h>
+#include <qtqaengine/QAKeyMouseEngine.h>
+#include <qtqaengine/QuickEnginePlatform.h>
 
 #include <QBuffer>
 #include <QDebug>
@@ -28,7 +31,7 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryQuickEnginePlatform, "autoqa.qaengine.platform.quick", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryQuickEnginePlatform, "qtqaengine.platform.quick", QtWarningMsg)
 
 QList<QObject*> QuickEnginePlatform::childrenList(QObject* parentItem)
 {
@@ -344,7 +347,7 @@ void QuickEnginePlatform::initialize()
 
     // initialize touch indicator
     QQmlEngine* engine = getEngine();
-    QQmlComponent component(engine, QUrl(QStringLiteral("qrc:/QAEngine/TouchIndicator.qml")));
+    QQmlComponent component(engine, QUrl(QStringLiteral("qrc:/QtQaEngine/TouchIndicator.qml")));
     if (!component.isReady())
     {
         qWarning() << Q_FUNC_INFO << component.errorString();

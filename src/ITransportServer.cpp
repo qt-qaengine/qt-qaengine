@@ -1,5 +1,8 @@
-#include <qt_qa_engine/ITransportClient.h>
-#include <qt_qa_engine/ITransportServer.h>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Copyright (c) 2026 Andrei Kozhevnikov <coderusinbox@gmail.com>
+
+#include <qtqaengine/ITransportClient.h>
+#include <qtqaengine/ITransportServer.h>
 
 #include <QDebug>
 #include <QJsonDocument>
@@ -7,7 +10,7 @@
 
 #include <QLoggingCategory>
 
-Q_LOGGING_CATEGORY(categoryITransportServer, "autoqa.qaengine.transport.interface", QtWarningMsg)
+Q_LOGGING_CATEGORY(categoryITransportServer, "qtqaengine.transport.interface", QtWarningMsg)
 
 ITransportServer::ITransportServer(QObject* parent)
     : QObject(parent)
